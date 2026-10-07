@@ -1,0 +1,59 @@
+{
+  "name": "backend",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon --watch src --ext ts --exec ts-node src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "check": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "migration:run": "ts-node src/cli/migrate.ts",
+    "seed": "ts-node src/cli/seed.ts",
+    "admin:create": "ts-node src/cli/admin.ts",
+    "migration:revert": "ts-node src/cli/migrate.ts --revert",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@nestjs/common": "11.2.7",
+    "@nestjs/core": "11.2.7",
+    "@nestjs/platform-express": "11.2.7",
+    "@nestjs/swagger": "11.4.7",
+    "@nestjs/typeorm": "11.0.3",
+    "argon2": "^0.44.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "mysql2": "^3.15.0",
+    "nodemailer": "^7.0.9",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "sharp": "^0.34.4",
+    "typeorm": "0.3.31",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
+    "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.7.2",
+    "@types/nodemailer": "^7.0.2",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.10",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "prettier": "3.6.2"
+  },
+  "packageManager": "pnpm@10.17.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "argon2",
+      "sharp",
+      "@nestjs/core"
+    ]
+  }
+}
