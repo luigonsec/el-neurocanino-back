@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { services } from '../content/catalog';
 import { Service, Review, Edition } from './entities';
 import { serviceSeoTitles } from '../content/service-seo';
+import { serviceCardImages } from '../content/service-card-images';
 import { config } from '../config';
 export async function seed(db: DataSource) {
   for (const s of services)
@@ -9,6 +10,7 @@ export async function seed(db: DataSource) {
       await db.getRepository(Service).save({
         ...s,
         outcomes: [...s.outcomes],
+        cardImage: serviceCardImages[s.code] || null,
         actionMode: 'contact',
         actionUrl: null,
         seoTitle: serviceSeoTitles[s.code],

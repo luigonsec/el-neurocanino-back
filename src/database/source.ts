@@ -7,6 +7,7 @@ import { ClubBrandAssets1791381600000 } from './brand-assets-migration';
 import { OrganizePublicImages1791410000000 } from './public-images-migration';
 import { AdminImprovements1791420000000 } from './admin-improvements-migration';
 import { RenamePresencial1792170000000 } from './rename-presencial-migration';
+import { ServiceCards1792171000000 } from './service-cards-migration';
 export const databaseOptions = {
   type: 'mysql' as const,
   host: config.DB_HOST,
@@ -23,6 +24,7 @@ export const databaseOptions = {
     OrganizePublicImages1791410000000,
     AdminImprovements1791420000000,
     RenamePresencial1792170000000,
+    ServiceCards1792171000000,
   ],
   synchronize: false,
 };

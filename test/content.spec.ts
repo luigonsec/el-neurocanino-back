@@ -32,6 +32,17 @@ describe('Ediciones y acciones', () => {
       image: '/images/training.jpg',
       actionMode: 'calendly',
     };
+    expect(
+      serviceSchema.safeParse({ ...s, cardImage: '/media/custom-card.webp', actionUrl: null })
+        .success,
+    ).toBe(true);
+    expect(
+      serviceSchema.safeParse({
+        ...s,
+        cardImage: 'https://external.test/image.png',
+        actionUrl: null,
+      }).success,
+    ).toBe(false);
     expect(serviceSchema.safeParse({ ...s, actionUrl: 'javascript:alert(1)' }).success).toBe(false);
     expect(
       serviceSchema.safeParse({ ...s, actionUrl: 'https://calendly.com.evil.test/persona' })

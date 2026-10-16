@@ -44,6 +44,7 @@ export const serviceSchema = z
     description: z.string().trim().min(10).max(10000),
     outcomes: z.array(z.string().trim().min(2).max(255)).min(1).max(10),
     image: mediaPath,
+    cardImage: mediaPath.nullish(),
     actionMode: z.enum(['contact', 'external', 'calendly']),
     actionUrl: optionalText(500),
     seoTitle: optionalText(),

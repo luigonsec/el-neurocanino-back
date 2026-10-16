@@ -17,6 +17,9 @@ export class Service {
   @Column({ type: 'text' }) description!: string;
   @Column({ type: 'json' }) outcomes!: string[];
   @Column() image!: string;
+  @Column({ name: 'card_image', type: 'varchar', length: 255, nullable: true }) cardImage!:
+    | string
+    | null;
   @Column({ name: 'action_mode', default: 'contact', length: 20 }) actionMode!: string;
   @Column({ name: 'action_url', type: 'varchar', length: 500, nullable: true }) actionUrl!:
     | string
