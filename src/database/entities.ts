@@ -32,6 +32,7 @@ export class Edition {
   @Column() location!: string;
   @Column() city!: string;
   @Column() province!: string;
+  @Column({ type: 'varchar', length: 20, default: 'open' }) status!: 'open' | 'closed';
   @Column({ name: 'start_date', type: 'date' }) startDate!: string;
   @Column({ name: 'end_date', type: 'date' }) endDate!: string;
   @Column({ type: 'text' }) description!: string;

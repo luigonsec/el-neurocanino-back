@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { services } from '../content/catalog';
 import { Service, Review, Edition } from './entities';
+import { serviceSeoTitles } from '../content/service-seo';
 import { config } from '../config';
 export async function seed(db: DataSource) {
   for (const s of services)
@@ -10,7 +11,7 @@ export async function seed(db: DataSource) {
         outcomes: [...s.outcomes],
         actionMode: 'contact',
         actionUrl: null,
-        seoTitle: null,
+        seoTitle: serviceSeoTitles[s.code],
         seoDescription: null,
       });
   if (config.SEED_DEMO !== 'true' || config.APP_ENV === 'production') return;
@@ -58,7 +59,10 @@ export async function seed(db: DataSource) {
           'Convocatoria de demostración. Un encuentro de observación, práctica y revisión de casos en grupo reducido.',
         capacity: 12,
         placesAvailable: n === 3 ? 0 : 8 - n,
-        photos: ['/images/training.jpg', '/images/community.jpg'],
+        photos: [
+          '/images/photos/adiestramiento-canino-en-campo.jpg',
+          '/images/photos/formacion-canina-practica.jpg',
+        ],
         calendlyUrl: null,
         published: true,
         isDemo: true,

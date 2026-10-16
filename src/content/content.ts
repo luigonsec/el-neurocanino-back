@@ -12,19 +12,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBody, ApiCookieAuth } from '@nestjs/swagger';
-import { DataSource, MoreThanOrEqual } from 'typeorm';
-import { Service, Edition, Review } from '../database/entities';
+import { DataSource } from 'typeorm';
+import { Service, Edition, Review, Lead } from '../database/entities';
 import { SessionGuard } from '../auth/auth';
 import { config } from '../config';
 import { privacyVersion } from '../privacy';
 import { parse, apiSchema, serviceSchema, editionSchema, reviewSchema } from '../validation';
-const today = () =>
-  new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Madrid',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
+import { editionStatus } from './edition-status';
 @ApiTags('Contenido público')
 @Controller()
 export class PublicContentController {
@@ -40,15 +34,22 @@ export class PublicContentController {
     if (!s) throw new NotFoundException();
     return s;
   }
-  @Get('editions') editions() {
-    return this.db.getRepository(Edition).find({
+  @Get('editions') async editions() {
+    const editions = await this.db.getRepository(Edition).find({
       where: {
         published: true,
-        startDate: MoreThanOrEqual(today()),
         ...(config.APP_ENV === 'production' ? { isDemo: false } : {}),
       },
       order: { startDate: 'ASC' },
     });
+    return editions
+      .map((e) => ({ ...e, status: editionStatus(e) }))
+      .sort((a, b) => {
+        if (a.status !== b.status) return a.status === 'open' ? -1 : 1;
+        return a.status === 'open'
+          ? a.startDate.localeCompare(b.startDate)
+          : b.endDate.localeCompare(a.endDate);
+      });
   }
   @Get('reviews') reviews() {
     return this.db.getRepository(Review).find({
@@ -75,8 +76,9 @@ export class AdminContentController {
     await r.update(id, parse(serviceSchema, body));
     return r.findOneByOrFail({ id });
   }
-  @Get('editions') editions() {
-    return this.db.getRepository(Edition).find({ order: { startDate: 'DESC' } });
+  @Get('editions') async editions() {
+    const editions = await this.db.getRepository(Edition).find({ order: { startDate: 'DESC' } });
+    return editions.map((e) => ({ ...e, effectiveStatus: editionStatus(e) }));
   }
   @Post('editions') @ApiBody({ schema: apiSchema(editionSchema) }) createEdition(
     @Body() body: unknown,
@@ -88,14 +90,23 @@ export class AdminContentController {
     @Body() body: unknown,
   ) {
     const r = this.db.getRepository(Edition);
-    if (!(await r.existsBy({ id }))) throw new NotFoundException();
-    await r.update(id, parse(editionSchema, body));
+    const current = await r.findOneBy({ id });
+    if (!current) throw new NotFoundException();
+    const values = parse(editionSchema, body);
+    if (body && typeof body === 'object' && !('status' in body)) values.status = current.status;
+    await r.update(id, values);
     return r.findOneByOrFail({ id });
   }
   @Delete('editions/:id') async deleteEdition(@Param('id', ParseIntPipe) id: number) {
     const r = this.db.getRepository(Edition);
     if (!(await r.existsBy({ id }))) throw new NotFoundException();
-    await r.delete(id);
+    await this.db.transaction(async (manager) => {
+      // Preserve the request type before the foreign key is set to NULL on deletion.
+      await manager
+        .getRepository(Lead)
+        .update({ editionId: id, kind: 'service' }, { kind: 'edition' });
+      await manager.getRepository(Edition).delete(id);
+    });
     return { ok: true };
   }
   @Get('reviews') reviews() {

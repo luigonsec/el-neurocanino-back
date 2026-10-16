@@ -13,7 +13,7 @@ export const services = [
       'Perspectiva sobre casos reales',
       'Acompañamiento continuado',
     ],
-    image: '/images/branding/grupo-profesionales-perros-club-integracion-canina.webp',
+    image: '/images/photos/grupo-club-integracion-canina.webp',
   },
   {
     code: 'online',
@@ -28,12 +28,12 @@ export const services = [
       'Aplicación a tu práctica diaria',
       'Un recorrido de aprendizaje estructurado',
     ],
-    image: '/images/training.jpg',
+    image: '/images/photos/adiestramiento-canino-en-campo.jpg',
   },
   {
     code: 'presencial',
     route: '/servicios/programa-presencial/',
-    title: 'Programa Presencial',
+    title: 'Programa presencial de 4 días',
     label: 'El criterio se entrena en campo',
     intro: 'Observación, práctica y conversación. Trabajar cerca cambia la forma de aprender.',
     description:
@@ -43,7 +43,7 @@ export const services = [
       'Trabajo sobre situaciones reales',
       'Observación y devolución directa',
     ],
-    image: '/images/training.jpg',
+    image: '/images/photos/adiestramiento-canino-en-campo.jpg',
   },
   {
     code: 'intensiva',
@@ -58,7 +58,7 @@ export const services = [
       'Revisión de tu planteamiento',
       'Orientación sobre los siguientes pasos',
     ],
-    image: '/images/dog.jpg',
+    image: '/images/photos/perro-pastor-aleman.jpg',
   },
   {
     code: 'educacion',
@@ -74,7 +74,7 @@ export const services = [
       'Trabajo en el entorno del perro',
       'Implicación de la familia',
     ],
-    image: '/images/dog.jpg',
+    image: '/images/photos/perro-pastor-aleman.jpg',
   },
   {
     code: 'rehabilitacion',
@@ -90,7 +90,7 @@ export const services = [
       'Trabajo sobre el entorno y la relación',
       'Acompañamiento de la familia',
     ],
-    image: '/images/dog.jpg',
+    image: '/images/photos/perro-pastor-aleman.jpg',
   },
 ] as const;
 export type ServiceCode = (typeof services)[number]['code'];

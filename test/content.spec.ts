@@ -1,3 +1,4 @@
+import { editionStatus, madridToday } from '../src/content/edition-status';
 import { editionSchema, serviceSchema } from '../src/validation';
 const edition = {
   title: 'Práctica en Sevilla',
@@ -39,5 +40,17 @@ describe('Ediciones y acciones', () => {
     expect(
       serviceSchema.safeParse({ ...s, actionUrl: 'https://calendly.com/persona/sesion' }).success,
     ).toBe(true);
+  });
+});
+
+describe('Cierre de ediciones', () => {
+  it('mantiene abiertas las ediciones en curso y cierra al terminar el último día', () => {
+    expect(editionStatus({ status: 'open', endDate: '2026-10-07' }, '2026-10-07')).toBe('open');
+    expect(editionStatus({ status: 'open', endDate: '2026-10-07' }, '2026-10-08')).toBe('closed');
+    expect(editionStatus({ status: 'closed', endDate: '2090-01-01' }, '2026-10-07')).toBe('closed');
+    expect(madridToday(new Date('2026-10-07T22:30:00Z'))).toBe('2026-10-08');
+  });
+  it('rechaza estados desconocidos', () => {
+    expect(editionSchema.safeParse({ ...edition, status: 'inventado' }).success).toBe(false);
   });
 });

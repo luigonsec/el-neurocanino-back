@@ -22,6 +22,7 @@ import { parse, apiSchema } from '../validation';
 import { leadSchema, regionSchema } from './schemas';
 import { SessionGuard } from '../auth/auth';
 import { config } from '../config';
+import { editionStatus } from '../content/edition-status';
 const statusSchema = z.object({ status: z.enum(['new', 'contacted', 'closed']) });
 export function csvCell(value: unknown) {
   let s = String(value ?? '');
@@ -66,11 +67,15 @@ export class LeadsController {
         published: true,
         ...(config.APP_ENV === 'production' ? { isDemo: false } : {}),
       });
-      if (!edition) throw new BadRequestException('La edición no está disponible.');
+      if (!edition || editionStatus(edition) === 'closed')
+        throw new BadRequestException('La edición no está disponible.');
       if (b.serviceCode !== 'presencial')
-        throw new BadRequestException('La edición pertenece al Programa Presencial.');
+        throw new BadRequestException('La edición pertenece al servicio de formación presencial.');
     }
-    return this.persist({ ...b, kind: b.serviceCode ? 'service' : 'general' });
+    return this.persist({
+      ...b,
+      kind: b.editionId ? 'edition' : b.serviceCode ? 'service' : 'general',
+    });
   }
   @Post('region-requests')
   @ApiBody({ schema: apiSchema(regionSchema) })
@@ -93,7 +98,8 @@ export class AdminLeadsController {
   private builder(query: Record<string, string>) {
     const q = parse(
       z.object({
-        kind: z.enum(['general', 'service', 'regional']).optional(),
+        category: z.enum(['general', 'service', 'edition', 'regional']).optional(),
+        kind: z.enum(['general', 'service', 'edition', 'regional']).optional(),
         status: z.enum(['new', 'contacted', 'closed']).optional(),
         service: z.string().max(40).optional(),
         source: z.string().max(100).optional(),
@@ -112,6 +118,16 @@ export class AdminLeadsController {
       source: q.source,
     }))
       if (value) b.andWhere(`lead.${field} = :${field}`, { [field]: value });
+    if (q.category === 'edition') {
+      // Include historical requests; their kind predates the separate edition category.
+      b.andWhere(
+        '(lead.kind = :editionKind OR (lead.kind = :serviceKind AND lead.editionId IS NOT NULL))',
+        { editionKind: 'edition', serviceKind: 'service' },
+      );
+    } else if (q.category) {
+      b.andWhere('lead.kind = :categoryKind', { categoryKind: q.category });
+      if (q.category === 'service') b.andWhere('lead.editionId IS NULL');
+    }
     return { b, page: q.page };
   }
   @Get() async list(@Query() query: Record<string, string>) {

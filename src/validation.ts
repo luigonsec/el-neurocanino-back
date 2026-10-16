@@ -63,6 +63,7 @@ export const editionSchema = z
     location: z.string().trim().min(2).max(255),
     city: z.string().trim().min(2).max(255),
     province: z.string().trim().min(2).max(255),
+    status: z.enum(['open', 'closed']).default('open'),
     startDate: date,
     endDate: date,
     description: z.string().trim().min(10).max(10000),
