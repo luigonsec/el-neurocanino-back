@@ -1,21 +1,27 @@
 import { DataSource } from 'typeorm';
 import { services } from '../content/catalog';
-import { Service, Review, Edition } from './entities';
+import { Service, ServiceOutcome, Review, Edition } from './entities';
 import { serviceSeoTitles } from '../content/service-seo';
 import { serviceCardImages } from '../content/service-card-images';
 import { config } from '../config';
 export async function seed(db: DataSource) {
-  for (const s of services)
-    if (!(await db.getRepository(Service).findOneBy({ code: s.code })))
-      await db.getRepository(Service).save({
-        ...s,
-        outcomes: [...s.outcomes],
-        cardImage: serviceCardImages[s.code] || null,
-        actionMode: 'contact',
-        actionUrl: null,
-        seoTitle: serviceSeoTitles[s.code],
+  for (const service of services) {
+    if (await db.getRepository(Service).findOneBy({ code: service.code })) continue;
+    await db.transaction(async (manager) => {
+      const { outcomes, ...values } = service;
+      const saved = await manager.getRepository(Service).save({
+        ...values,
+        cardImage: serviceCardImages[service.code] || null,
+        actionMode: service.code === 'comunidad' ? 'external' : 'contact',
+        actionUrl: service.code === 'comunidad' ? 'https://www.skool.com/elneurocanino' : null,
+        seoTitle: serviceSeoTitles[service.code],
         seoDescription: null,
       });
+      await manager
+        .getRepository(ServiceOutcome)
+        .save(outcomes.map((point, sortOrder) => ({ ...point, serviceId: saved.id, sortOrder })));
+    });
+  }
   if (config.SEED_DEMO !== 'true' || config.APP_ENV === 'production') return;
   if ((await db.getRepository(Review).count()) === 0) {
     const texts = [

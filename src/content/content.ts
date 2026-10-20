@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -12,8 +13,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBody, ApiCookieAuth } from '@nestjs/swagger';
-import { DataSource } from 'typeorm';
-import { Service, Edition, Review, Lead } from '../database/entities';
+import { DataSource, In } from 'typeorm';
+import { Service, ServiceOutcome, Edition, Review, Lead } from '../database/entities';
 import { SessionGuard } from '../auth/auth';
 import { config } from '../config';
 import { privacyVersion } from '../privacy';
@@ -27,10 +28,21 @@ export class PublicContentController {
     return { privacyVersion };
   }
   @Get('services') listServices() {
-    return this.db.getRepository(Service).find({ order: { id: 'ASC' } });
+    return this.db
+      .getRepository(Service)
+      .find({
+        relations: { outcomes: true },
+        order: { id: 'ASC', outcomes: { sortOrder: 'ASC', id: 'ASC' } },
+      });
   }
   @Get('services/:code') async getService(@Param('code') code: string) {
-    const s = await this.db.getRepository(Service).findOneBy({ code });
+    const s = await this.db
+      .getRepository(Service)
+      .findOne({
+        where: { code },
+        relations: { outcomes: true },
+        order: { outcomes: { sortOrder: 'ASC', id: 'ASC' } },
+      });
     if (!s) throw new NotFoundException();
     return s;
   }
@@ -66,15 +78,48 @@ export class PublicContentController {
 export class AdminContentController {
   constructor(@Inject(DataSource) private db: DataSource) {}
   @Get('services') services() {
-    return this.db.getRepository(Service).find({ order: { id: 'ASC' } });
+    return this.db
+      .getRepository(Service)
+      .find({
+        relations: { outcomes: true },
+        order: { id: 'ASC', outcomes: { sortOrder: 'ASC', id: 'ASC' } },
+      });
   }
   @Patch('services/:id')
   @ApiBody({ schema: apiSchema(serviceSchema) })
   async service(@Param('id', ParseIntPipe) id: number, @Body() body: unknown) {
-    const r = this.db.getRepository(Service);
-    if (!(await r.existsBy({ id }))) throw new NotFoundException();
-    await r.update(id, parse(serviceSchema, body));
-    return r.findOneByOrFail({ id });
+    const { outcomes, ...values } = parse(serviceSchema, body);
+    return this.db.transaction(async (manager) => {
+      const services = manager.getRepository(Service);
+      const service = await services.findOne({
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!service) throw new NotFoundException();
+      const points = manager.getRepository(ServiceOutcome);
+      const current = await points.find({ where: { serviceId: id } });
+      const owned = new Set(current.map((point) => point.id));
+      if (outcomes.some((point) => point.id !== undefined && !owned.has(point.id))) {
+        throw new BadRequestException('Uno de los puntos no pertenece a este servicio.');
+      }
+      await services.update(id, values);
+      const retained = new Set(outcomes.map((point) => point.id));
+      const removed = current.filter((point) => !retained.has(point.id)).map((point) => point.id);
+      if (removed.length) await points.delete({ serviceId: id, id: In(removed) });
+      if (outcomes.length)
+        await points.save(
+          outcomes.map((point, sortOrder) => ({
+            ...point,
+            serviceId: id,
+            sortOrder,
+          })),
+        );
+      return services.findOneOrFail({
+        where: { id },
+        relations: { outcomes: true },
+        order: { outcomes: { sortOrder: 'ASC', id: 'ASC' } },
+      });
+    });
   }
   @Get('editions') async editions() {
     const editions = await this.db.getRepository(Edition).find({ order: { startDate: 'DESC' } });

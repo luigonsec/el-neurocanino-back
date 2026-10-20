@@ -36,13 +36,24 @@ export const calendlyUrl = z.url().refine((u) => {
 export const externalUrl = z
   .url()
   .refine((u) => new URL(u).protocol === 'https:', 'La URL debe utilizar HTTPS.');
+export const serviceOutcomeSchema = z.object({
+  id: z.number().int().positive().optional(),
+  title: z.string().trim().min(2).max(255),
+  description: z.string().trim().max(4000),
+});
 export const serviceSchema = z
   .object({
     title: z.string().trim().min(2).max(255),
     label: z.string().trim().min(2).max(255),
     intro: z.string().trim().min(10).max(2000),
     description: z.string().trim().min(10).max(10000),
-    outcomes: z.array(z.string().trim().min(2).max(255)).min(1).max(10),
+    outcomes: z
+      .array(serviceOutcomeSchema)
+      .max(20)
+      .refine((points) => {
+        const ids = points.flatMap((point) => (point.id ? [point.id] : []));
+        return new Set(ids).size === ids.length;
+      }, 'Un punto no puede aparecer dos veces.'),
     image: mediaPath,
     cardImage: mediaPath.nullish(),
     actionMode: z.enum(['contact', 'external', 'calendly']),

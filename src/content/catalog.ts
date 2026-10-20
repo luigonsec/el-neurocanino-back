@@ -9,11 +9,11 @@ export const services = [
     description:
       'El aprendizaje no termina al cerrar una sesión. Una comunidad permite contrastar experiencias, revisar casos y sostener una forma de trabajar consciente.',
     outcomes: [
-      'Intercambio entre profesionales',
-      'Perspectiva sobre casos reales',
-      'Acompañamiento continuado',
+      { title: 'Intercambio entre profesionales', description: '' },
+      { title: 'Perspectiva sobre casos reales', description: '' },
+      { title: 'Acompañamiento continuado', description: '' },
     ],
-    image: '/images/photos/grupo-club-integracion-canina.webp',
+    image: '/images/banners/banner-empieza-aqui-llave-huella.jpeg',
   },
   {
     code: 'online',
@@ -24,9 +24,9 @@ export const services = [
     description:
       'Una propuesta de formación a distancia para integrar la metodología en tu trabajo diario. El contenido, el calendario y las condiciones definitivas se anunciarán próximamente.',
     outcomes: [
-      'Formación desde tu propio entorno',
-      'Aplicación a tu práctica diaria',
-      'Un recorrido de aprendizaje estructurado',
+      { title: 'Formación desde tu propio entorno', description: '' },
+      { title: 'Aplicación a tu práctica diaria', description: '' },
+      { title: 'Un recorrido de aprendizaje estructurado', description: '' },
     ],
     image: '/images/photos/adiestramiento-canino-en-campo.jpg',
   },
@@ -39,9 +39,9 @@ export const services = [
     description:
       'Ediciones presenciales en grupos reducidos para profundizar en la relación humano–perro y la Metodología de Integración Canina. Consulta las próximas convocatorias o propón una edición en tu zona.',
     outcomes: [
-      'Práctica en grupos reducidos',
-      'Trabajo sobre situaciones reales',
-      'Observación y devolución directa',
+      { title: 'Práctica en grupos reducidos', description: '' },
+      { title: 'Trabajo sobre situaciones reales', description: '' },
+      { title: 'Observación y devolución directa', description: '' },
     ],
     image: '/images/photos/adiestramiento-canino-en-campo.jpg',
   },
@@ -54,9 +54,9 @@ export const services = [
     description:
       'Un espacio de trabajo individual para profesionales que necesitan profundizar en un caso, revisar su planteamiento o aclarar una intervención. El formato definitivo se concretará al solicitar información.',
     outcomes: [
-      'Atención a una situación concreta',
-      'Revisión de tu planteamiento',
-      'Orientación sobre los siguientes pasos',
+      { title: 'Atención a una situación concreta', description: '' },
+      { title: 'Revisión de tu planteamiento', description: '' },
+      { title: 'Orientación sobre los siguientes pasos', description: '' },
     ],
     image: '/images/photos/perro-pastor-aleman.jpg',
   },
@@ -70,9 +70,9 @@ export const services = [
     description:
       'Comprender al perro y las necesidades de su familia es el punto de partida. Trabajamos sobre la convivencia, los paseos y las situaciones cotidianas, con implicación de las personas que acompañan al perro.',
     outcomes: [
-      'Educación para la vida cotidiana',
-      'Trabajo en el entorno del perro',
-      'Implicación de la familia',
+      { title: 'Educación para la vida cotidiana', description: '' },
+      { title: 'Trabajo en el entorno del perro', description: '' },
+      { title: 'Implicación de la familia', description: '' },
     ],
     image: '/images/photos/perro-pastor-aleman.jpg',
   },
@@ -86,9 +86,9 @@ export const services = [
     description:
       'Reactividad, miedo, ansiedad y dificultades de convivencia necesitan una mirada individual. La valoración inicial permite comprender la situación, el entorno y las necesidades del perro y de las personas con las que vive.',
     outcomes: [
-      'Valoración de cada situación',
-      'Trabajo sobre el entorno y la relación',
-      'Acompañamiento de la familia',
+      { title: 'Valoración de cada situación', description: '' },
+      { title: 'Trabajo sobre el entorno y la relación', description: '' },
+      { title: 'Acompañamiento de la familia', description: '' },
     ],
     image: '/images/photos/perro-pastor-aleman.jpg',
   },

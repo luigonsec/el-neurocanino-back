@@ -1,5 +1,5 @@
 import { editionStatus, madridToday } from '../src/content/edition-status';
-import { editionSchema, serviceSchema } from '../src/validation';
+import { editionSchema, serviceSchema, serviceOutcomeSchema } from '../src/validation';
 const edition = {
   title: 'Práctica en Sevilla',
   location: 'Campo de trabajo',
@@ -28,7 +28,7 @@ describe('Ediciones y acciones', () => {
       label: 'Un espacio para aprender',
       intro: 'Una introducción completa.',
       description: 'Descripción del servicio.',
-      outcomes: ['Trabajo en grupo'],
+      outcomes: [{ title: 'Trabajo en grupo', description: 'Práctica y revisión compartida.' }],
       image: '/images/training.jpg',
       actionMode: 'calendly',
     };
@@ -63,5 +63,20 @@ describe('Cierre de ediciones', () => {
   });
   it('rechaza estados desconocidos', () => {
     expect(editionSchema.safeParse({ ...edition, status: 'inventado' }).success).toBe(false);
+  });
+});
+
+describe('Puntos del recorrido', () => {
+  it('requiere estructura de título y descripción y rechaza IDs inválidos', () => {
+    expect(serviceOutcomeSchema.safeParse('Trabajo en grupo').success).toBe(false);
+    expect(
+      serviceOutcomeSchema.safeParse({ title: 'Trabajo en grupo', description: 'Una descripción.' })
+        .success,
+    ).toBe(true);
+    expect(serviceOutcomeSchema.safeParse({ title: 'X', description: '' }).success).toBe(false);
+    expect(
+      serviceOutcomeSchema.safeParse({ id: -1, title: 'Trabajo en grupo', description: '' })
+        .success,
+    ).toBe(false);
   });
 });

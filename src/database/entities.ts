@@ -5,6 +5,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 @Entity('services')
 export class Service {
@@ -15,7 +18,7 @@ export class Service {
   @Column() label!: string;
   @Column({ type: 'text' }) intro!: string;
   @Column({ type: 'text' }) description!: string;
-  @Column({ type: 'json' }) outcomes!: string[];
+  @OneToMany(() => ServiceOutcome, (outcome) => outcome.service) outcomes!: ServiceOutcome[];
   @Column() image!: string;
   @Column({ name: 'card_image', type: 'varchar', length: 255, nullable: true }) cardImage!:
     | string
@@ -27,6 +30,18 @@ export class Service {
   @Column({ name: 'seo_title', type: 'varchar', nullable: true }) seoTitle!: string | null;
   @Column({ name: 'seo_description', type: 'text', nullable: true }) seoDescription!: string | null;
   @UpdateDateColumn({ name: 'updated_at' }) updatedAt!: Date;
+}
+@Entity('service_outcomes')
+@Index(['serviceId', 'sortOrder'])
+export class ServiceOutcome {
+  @PrimaryGeneratedColumn() id!: number;
+  @Column({ name: 'service_id' }) serviceId!: number;
+  @ManyToOne(() => Service, (service) => service.outcomes, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'service_id' })
+  service!: Service;
+  @Column({ length: 255 }) title!: string;
+  @Column({ type: 'text' }) description!: string;
+  @Column({ name: 'sort_order', default: 0 }) sortOrder!: number;
 }
 @Entity('editions')
 export class Edition {
@@ -125,4 +140,14 @@ export class Delivery {
   @Column({ name: 'next_attempt_at', type: 'datetime' }) nextAttemptAt!: Date;
   @Column({ name: 'last_error', type: 'text', nullable: true }) lastError!: string | null;
 }
-export const entities = [Service, Edition, Review, Lead, Administrator, Session, Media, Delivery];
+export const entities = [
+  Service,
+  ServiceOutcome,
+  Edition,
+  Review,
+  Lead,
+  Administrator,
+  Session,
+  Media,
+  Delivery,
+];
