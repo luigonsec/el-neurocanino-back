@@ -1,0 +1,48 @@
+name: Verify and deploy
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: development
+      DB_PASSWORD: ci_test_password_only
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Install dependencies and verify
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.17.1 --activate
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm test
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Deploy the exact main commit
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          test -n "$DEPLOY_SSH_KEY" || { echo 'Missing DEPLOY_SSH_KEY repository secret'; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/neurocanino
+          chmod 600 ~/.ssh/neurocanino
+          printf '%s\n' '72.62.210.87 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDlfzTMhJH6p7hoSw4nbveMzZRlCtYvngSPKqOXgLB30' > ~/.ssh/known_hosts
+          git archive --format=tar "$GITHUB_SHA" | ssh -i ~/.ssh/neurocanino -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 neurodeploy@72.62.210.87 "$GITHUB_SHA"
+          rm -f ~/.ssh/neurocanino

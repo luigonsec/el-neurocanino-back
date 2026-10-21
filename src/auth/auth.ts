@@ -72,7 +72,7 @@ export class AuthController {
       .save({ tokenHash: hash(token), adminId: admin.id, csrfToken, expiresAt });
     res.cookie('neuro_session', token, {
       httpOnly: true,
-      secure: config.APP_ENV !== 'development',
+      secure: new URL(config.PUBLIC_ORIGIN).protocol === 'https:',
       sameSite: 'lax',
       path: '/',
       expires: expiresAt,
@@ -93,7 +93,7 @@ export class AuthController {
     res.clearCookie('neuro_session', {
       path: '/',
       httpOnly: true,
-      secure: config.APP_ENV !== 'development',
+      secure: new URL(config.PUBLIC_ORIGIN).protocol === 'https:',
       sameSite: 'lax',
     });
     return { ok: true };
