@@ -4,5 +4,5 @@ export const serviceSeoTitles: Record<string, string> = {
   presencial: 'Formación canina presencial | Club Integración Canina',
   intensiva: 'Sesión intensiva canina en Sevilla | Integración Canina',
   educacion: 'Adiestramiento y educación canina en Sevilla',
-  rehabilitacion: 'Modificación de conducta y rehabilitación canina en Sevilla',
+  rehabilitacion: 'Modificación de comportamiento canino en Sevilla | El Neurocanino',
 };

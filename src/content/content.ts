@@ -20,6 +20,19 @@ import { config } from '../config';
 import { privacyVersion } from '../privacy';
 import { parse, apiSchema, serviceSchema, editionSchema, reviewSchema } from '../validation';
 import { editionStatus } from './edition-status';
+import { findOffers, publicOffer, safeBooking, saveEditionPaymentLinks } from './commerce';
+import type { CommercialOffer } from '../database/entities';
+function withBooking(service: Service, offers: CommercialOffer[]) {
+  const offer = offers.find((o) => o.code === service.code);
+  const booking = offer ? publicOffer(offer) : null;
+  return {
+    ...service,
+    actionUrl: safeBooking(service.actionUrl),
+    hasPricing: Boolean(booking?.options.length),
+    bookingUrl: booking?.bookingUrl || null,
+    bookingIsDemo: booking?.bookingIsDemo || false,
+  };
+}
 @ApiTags('Contenido público')
 @Controller()
 export class PublicContentController {
@@ -27,24 +40,22 @@ export class PublicContentController {
   @Get('public-config') publicConfig() {
     return { privacyVersion };
   }
-  @Get('services') listServices() {
-    return this.db
-      .getRepository(Service)
-      .find({
-        relations: { outcomes: true },
-        order: { id: 'ASC', outcomes: { sortOrder: 'ASC', id: 'ASC' } },
-      });
+  @Get('services') async listServices() {
+    const rows = await this.db.getRepository(Service).find({
+      relations: { outcomes: true },
+      order: { id: 'ASC', outcomes: { sortOrder: 'ASC', id: 'ASC' } },
+    });
+    const offers = await findOffers(this.db);
+    return rows.map((s) => withBooking(s, offers));
   }
   @Get('services/:code') async getService(@Param('code') code: string) {
-    const s = await this.db
-      .getRepository(Service)
-      .findOne({
-        where: { code },
-        relations: { outcomes: true },
-        order: { outcomes: { sortOrder: 'ASC', id: 'ASC' } },
-      });
+    const s = await this.db.getRepository(Service).findOne({
+      where: { code },
+      relations: { outcomes: true },
+      order: { outcomes: { sortOrder: 'ASC', id: 'ASC' } },
+    });
     if (!s) throw new NotFoundException();
-    return s;
+    return withBooking(s, await findOffers(this.db, code));
   }
   @Get('editions') async editions() {
     const editions = await this.db.getRepository(Edition).find({
@@ -53,9 +64,32 @@ export class PublicContentController {
         ...(config.APP_ENV === 'production' ? { isDemo: false } : {}),
       },
       order: { startDate: 'ASC' },
+      relations: { paymentLinks: { option: { offer: { services: true } } } },
     });
     return editions
-      .map((e) => ({ ...e, status: editionStatus(e) }))
+      .map((e) => ({
+        ...e,
+        status: editionStatus(e),
+        calendlyUrl: safeBooking(e.calendlyUrl),
+        paymentLinks:
+          editionStatus(e) === 'closed' || e.placesAvailable === 0
+            ? []
+            : e.paymentLinks
+                .filter(
+                  (l) =>
+                    l.option.offer.published &&
+                    !l.option.offer.provisional &&
+                    l.option.offer.services.some((s) => s.code === 'presencial'),
+                )
+                .map((l) => ({
+                  id: l.id,
+                  paymentOptionId: l.paymentOptionId,
+                  url: l.url,
+                  label: l.option.label,
+                  method: l.option.method,
+                  offerTitle: l.option.offer.title,
+                })),
+      }))
       .sort((a, b) => {
         if (a.status !== b.status) return a.status === 'open' ? -1 : 1;
         return a.status === 'open'
@@ -78,12 +112,10 @@ export class PublicContentController {
 export class AdminContentController {
   constructor(@Inject(DataSource) private db: DataSource) {}
   @Get('services') services() {
-    return this.db
-      .getRepository(Service)
-      .find({
-        relations: { outcomes: true },
-        order: { id: 'ASC', outcomes: { sortOrder: 'ASC', id: 'ASC' } },
-      });
+    return this.db.getRepository(Service).find({
+      relations: { outcomes: true },
+      order: { id: 'ASC', outcomes: { sortOrder: 'ASC', id: 'ASC' } },
+    });
   }
   @Patch('services/:id')
   @ApiBody({ schema: apiSchema(serviceSchema) })
@@ -122,13 +154,22 @@ export class AdminContentController {
     });
   }
   @Get('editions') async editions() {
-    const editions = await this.db.getRepository(Edition).find({ order: { startDate: 'DESC' } });
+    const editions = await this.db
+      .getRepository(Edition)
+      .find({ order: { startDate: 'DESC' }, relations: { paymentLinks: true } });
     return editions.map((e) => ({ ...e, effectiveStatus: editionStatus(e) }));
   }
-  @Post('editions') @ApiBody({ schema: apiSchema(editionSchema) }) createEdition(
+  @Post('editions') @ApiBody({ schema: apiSchema(editionSchema) }) async createEdition(
     @Body() body: unknown,
   ) {
-    return this.db.getRepository(Edition).save(parse(editionSchema, body));
+    const { paymentLinks, ...values } = parse(editionSchema, body);
+    return this.db.transaction(async (manager) => {
+      const saved = await manager.getRepository(Edition).save(values);
+      await saveEditionPaymentLinks(manager, saved.id, paymentLinks);
+      return manager
+        .getRepository(Edition)
+        .findOneOrFail({ where: { id: saved.id }, relations: { paymentLinks: true } });
+    });
   }
   @Patch('editions/:id') @ApiBody({ schema: apiSchema(editionSchema) }) async edition(
     @Param('id', ParseIntPipe) id: number,
@@ -139,8 +180,14 @@ export class AdminContentController {
     if (!current) throw new NotFoundException();
     const values = parse(editionSchema, body);
     if (body && typeof body === 'object' && !('status' in body)) values.status = current.status;
-    await r.update(id, values);
-    return r.findOneByOrFail({ id });
+    const { paymentLinks, ...fields } = values;
+    return this.db.transaction(async (manager) => {
+      await manager.getRepository(Edition).update(id, fields);
+      await saveEditionPaymentLinks(manager, id, paymentLinks);
+      return manager
+        .getRepository(Edition)
+        .findOneOrFail({ where: { id }, relations: { paymentLinks: true } });
+    });
   }
   @Delete('editions/:id') async deleteEdition(@Param('id', ParseIntPipe) id: number) {
     const r = this.db.getRepository(Edition);

@@ -4,6 +4,7 @@ import { Service, ServiceOutcome, Review, Edition } from './entities';
 import { serviceSeoTitles } from '../content/service-seo';
 import { serviceCardImages } from '../content/service-card-images';
 import { config } from '../config';
+import { seedCommerce } from './commerce-seed';
 export async function seed(db: DataSource) {
   for (const service of services) {
     if (await db.getRepository(Service).findOneBy({ code: service.code })) continue;
@@ -22,6 +23,7 @@ export async function seed(db: DataSource) {
         .save(outcomes.map((point, sortOrder) => ({ ...point, serviceId: saved.id, sortOrder })));
     });
   }
+  await db.transaction(seedCommerce);
   if (config.SEED_DEMO !== 'true' || config.APP_ENV === 'production') return;
   if ((await db.getRepository(Review).count()) === 0) {
     const texts = [

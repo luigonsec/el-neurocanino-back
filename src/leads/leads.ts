@@ -22,6 +22,8 @@ import { parse, apiSchema } from '../validation';
 import { leadSchema, regionSchema } from './schemas';
 import { SessionGuard } from '../auth/auth';
 import { config } from '../config';
+import { createHash, randomUUID } from 'node:crypto';
+import { quizLeadSchema } from './quiz-schema';
 import { editionStatus } from '../content/edition-status';
 const statusSchema = z.object({ status: z.enum(['new', 'contacted', 'closed']) });
 export function csvCell(value: unknown) {
@@ -55,6 +57,85 @@ export class LeadsController {
         },
       ]);
       return { id: lead.id, message: 'Hemos recibido tu solicitud. Te contactaremos pronto.' };
+    });
+  }
+  @Post('quiz-leads')
+  @ApiBody({ schema: apiSchema(quizLeadSchema) })
+  async quiz(@Body() body: unknown) {
+    const b = parse(quizLeadSchema, body);
+    const quizTokenHash = createHash('sha256').update(b.submissionKey).digest('hex');
+    return this.db.transaction(async (manager) => {
+      const repo = manager.getRepository(Lead);
+      const previous = await repo.findOneBy({ quizTokenHash });
+      const values = {
+        id: randomUUID(),
+        quizTokenHash,
+        name: b.name,
+        phone: b.phone,
+        email: null,
+        message:
+          b.answers.profile === 'personal'
+            ? `${b.answers.obstacle}\n\nSituación deseada: ${b.answers.desired}`
+            : `Orientación para ${b.answers.profile === 'professional' ? 'profesional' : 'futuro profesional'}.\n${JSON.stringify(b.answers)}`,
+        kind: 'service',
+        source: 'guided-quiz',
+        serviceCode:
+          b.answers.recommendation === 'online-presencial' ? 'online' : b.answers.recommendation,
+        quizContext: {
+          version: b.answers.profile === 'personal' ? 'personal-v2' : 'professional-v1',
+          phoneCountry: b.phoneCountry,
+          ...b.answers,
+          ...(b.answers.profile === 'personal'
+            ? {
+                effectiveFormat:
+                  b.answers.interest === 'online-presencial'
+                    ? 'mixed'
+                    : b.answers.interest === 'online'
+                      ? 'online'
+                      : b.answers.interest === 'presencial'
+                        ? 'presencial'
+                        : 'individual',
+              }
+            : {}),
+        },
+        privacyVersion: b.privacyVersion,
+      };
+      await repo
+        .createQueryBuilder()
+        .insert()
+        .values(values)
+        .orUpdate(
+          ['name', 'phone', 'message', 'service_code', 'quiz_context', 'privacy_version'],
+          ['quiz_token_hash'],
+        )
+        .execute();
+      const lead = await repo.findOneByOrFail({ quizTokenHash });
+      // Retrying or reviewing a questionnaire updates the same CRM record.
+      if (!(await manager.getRepository(Delivery).existsBy({ leadId: lead.id }))) {
+        await manager.getRepository(Delivery).save(
+          ['crm', 'email'].map((channel) => ({
+            leadId: lead.id,
+            channel,
+            status: 'pending',
+            attempts: 0,
+            nextAttemptAt: new Date(),
+          })),
+        );
+      }
+      if (
+        previous &&
+        (previous.name !== lead.name ||
+          previous.phone !== lead.phone ||
+          JSON.stringify(previous.quizContext) !== JSON.stringify(lead.quizContext))
+      ) {
+        await manager
+          .getRepository(Delivery)
+          .update(
+            { leadId: lead.id, channel: 'crm' },
+            { status: 'pending', attempts: 0, nextAttemptAt: new Date() },
+          );
+      }
+      return { id: lead.id, message: 'Tu orientación se ha guardado.' };
     });
   }
   @Post('leads')
@@ -103,6 +184,7 @@ export class AdminLeadsController {
         status: z.enum(['new', 'contacted', 'closed']).optional(),
         service: z.string().max(40).optional(),
         source: z.string().max(100).optional(),
+        investment: z.enum(['entry', 'standard', 'plus']).optional(),
         page: z.coerce.number().int().min(1).default(1),
       }),
       query,
@@ -114,7 +196,7 @@ export class AdminLeadsController {
     for (const [field, value] of Object.entries({
       kind: q.kind,
       status: q.status,
-      serviceCode: q.service,
+      serviceCode: q.service === 'online-presencial' ? undefined : q.service,
       source: q.source,
     }))
       if (value) b.andWhere(`lead.${field} = :${field}`, { [field]: value });
@@ -128,6 +210,14 @@ export class AdminLeadsController {
       b.andWhere('lead.kind = :categoryKind', { categoryKind: q.category });
       if (q.category === 'service') b.andWhere('lead.editionId IS NULL');
     }
+    if (q.service === 'online-presencial')
+      b.andWhere("JSON_UNQUOTE(JSON_EXTRACT(lead.quiz_context, '$.recommendation')) = :packCode", {
+        packCode: 'online-presencial',
+      });
+    if (q.investment)
+      b.andWhere("JSON_UNQUOTE(JSON_EXTRACT(lead.quiz_context, '$.investment')) = :investment", {
+        investment: q.investment,
+      });
     return { b, page: q.page };
   }
   @Get() async list(@Query() query: Record<string, string>) {
@@ -161,6 +251,10 @@ export class AdminLeadsController {
           'Estado',
           'Fecha',
           'Versión privacidad',
+          'Servicio de interés',
+          'Inversión',
+          'Recomendación final',
+          'Respuestas del cuestionario',
         ]
           .map(csvCell)
           .join(',') +
@@ -186,6 +280,21 @@ export class AdminLeadsController {
           v.lead_status,
           v.lead_created_at,
           v.lead_privacy_version,
+          (typeof v.lead_quiz_context === 'string'
+            ? JSON.parse(v.lead_quiz_context)
+            : v.lead_quiz_context
+          )?.interest,
+          (typeof v.lead_quiz_context === 'string'
+            ? JSON.parse(v.lead_quiz_context)
+            : v.lead_quiz_context
+          )?.investment,
+          (typeof v.lead_quiz_context === 'string'
+            ? JSON.parse(v.lead_quiz_context)
+            : v.lead_quiz_context
+          )?.recommendation,
+          typeof v.lead_quiz_context === 'string'
+            ? v.lead_quiz_context
+            : JSON.stringify(v.lead_quiz_context || ''),
         ]
           .map(csvCell)
           .join(',') + '\r\n',

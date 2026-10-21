@@ -8,6 +8,8 @@ import {
   OneToMany,
   ManyToOne,
   JoinColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 @Entity('services')
 export class Service {
@@ -62,7 +64,72 @@ export class Edition {
     | null;
   @Column({ default: false }) published!: boolean;
   @Column({ name: 'is_demo', default: false }) isDemo!: boolean;
+  @OneToMany(() => EditionPaymentLink, (link) => link.edition) paymentLinks!: EditionPaymentLink[];
   @UpdateDateColumn({ name: 'updated_at' }) updatedAt!: Date;
+}
+@Entity('commercial_offers')
+export class CommercialOffer {
+  @PrimaryGeneratedColumn() id!: number;
+  @Column({ unique: true, length: 60 }) code!: string;
+  @Column() title!: string;
+  @Column({ type: 'text' }) description!: string;
+  @Column({ type: 'varchar', length: 255, nullable: true, unique: true }) route!: string | null;
+  @Column({ name: 'booking_url', type: 'varchar', length: 500, nullable: true }) bookingUrl!:
+    | string
+    | null;
+  @Column({ name: 'seo_title', type: 'varchar', length: 255, nullable: true }) seoTitle!:
+    | string
+    | null;
+  @Column({ name: 'seo_description', type: 'text', nullable: true }) seoDescription!: string | null;
+  @Column({ default: false }) provisional!: boolean;
+  @Column({ default: true }) published!: boolean;
+  @Column({ name: 'klarna_enabled', default: false }) klarnaEnabled!: boolean;
+  @ManyToMany(() => Service)
+  @JoinTable({
+    name: 'offer_services',
+    joinColumn: { name: 'offer_id' },
+    inverseJoinColumn: { name: 'service_id' },
+  })
+  services!: Service[];
+  @OneToMany(() => PaymentOption, (option) => option.offer) options!: PaymentOption[];
+}
+@Entity('payment_options')
+export class PaymentOption {
+  @PrimaryGeneratedColumn() id!: number;
+  @Column({ name: 'offer_id' }) offerId!: number;
+  @ManyToOne(() => CommercialOffer, (offer) => offer.options, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'offer_id' })
+  offer!: CommercialOffer;
+  @Column() label!: string;
+  @Column({ length: 20 }) method!: 'stripe' | 'transfer' | 'calendly';
+  @Column({ length: 3, default: 'EUR' }) currency!: string;
+  @Column({ name: 'amount_cents' }) amountCents!: number;
+  @Column({ name: 'installment_count', default: 1 }) installmentCount!: number;
+  @Column({ name: 'deposit_cents', default: 0 }) depositCents!: number;
+  @Column({ name: 'payment_url', type: 'varchar', length: 500, nullable: true }) paymentUrl!:
+    | string
+    | null;
+  @Column({ name: 'transfer_instructions', type: 'text', nullable: true }) transferInstructions!:
+    | string
+    | null;
+  @Column({ name: 'whatsapp_url', type: 'varchar', length: 500, nullable: true }) whatsappUrl!:
+    | string
+    | null;
+  @Column({ name: 'sort_order', default: 0 }) sortOrder!: number;
+}
+@Entity('edition_payment_links')
+@Index(['editionId', 'paymentOptionId'], { unique: true })
+export class EditionPaymentLink {
+  @PrimaryGeneratedColumn() id!: number;
+  @Column({ name: 'edition_id' }) editionId!: number;
+  @ManyToOne(() => Edition, (edition) => edition.paymentLinks, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'edition_id' })
+  edition!: Edition;
+  @Column({ name: 'payment_option_id' }) paymentOptionId!: number;
+  @ManyToOne(() => PaymentOption, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'payment_option_id' })
+  option!: PaymentOption;
+  @Column({ length: 500 }) url!: string;
 }
 @Entity('reviews')
 export class Review {
@@ -82,7 +149,16 @@ export class Review {
 export class Lead {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column() name!: string;
-  @Column() email!: string;
+  @Column({ type: 'varchar', nullable: true }) email!: string | null;
+  @Column({
+    name: 'quiz_token_hash',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+    unique: true,
+    select: false,
+  })
+  quizTokenHash!: string | null;
   @Column({ type: 'varchar', nullable: true, length: 40 }) phone!: string | null;
   @Column({ type: 'varchar', nullable: true }) city!: string | null;
   @Column({ type: 'varchar', nullable: true }) province!: string | null;
@@ -141,6 +217,9 @@ export class Delivery {
   @Column({ name: 'last_error', type: 'text', nullable: true }) lastError!: string | null;
 }
 export const entities = [
+  CommercialOffer,
+  PaymentOption,
+  EditionPaymentLink,
   Service,
   ServiceOutcome,
   Edition,

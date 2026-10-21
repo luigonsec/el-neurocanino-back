@@ -22,7 +22,7 @@ export const services = [
     label: 'Aprende desde donde trabajas',
     intro: 'Formación para observar mejor, comprender lo que ocurre y llevarlo a tu práctica.',
     description:
-      'Una propuesta de formación a distancia para integrar la metodología en tu trabajo diario. El contenido, el calendario y las condiciones definitivas se anunciarán próximamente.',
+      'Formación a distancia alojada en Skool para integrar la metodología en tu práctica. Puedes contratar el Programa Online de forma independiente o combinarlo con la Comunidad o una edición presencial.',
     outcomes: [
       { title: 'Formación desde tu propio entorno', description: '' },
       { title: 'Aplicación a tu práctica diaria', description: '' },
@@ -48,11 +48,11 @@ export const services = [
   {
     code: 'intensiva',
     route: '/servicios/sesion-intensiva/',
-    title: 'Sesión Intensiva',
+    title: 'Sesión Intensiva en Sevilla',
     label: 'Una mirada sobre tu caso',
     intro: 'Un encuentro enfocado para revisar una situación y decidir cómo continuar.',
     description:
-      'Un espacio de trabajo individual para profesionales que necesitan profundizar en un caso, revisar su planteamiento o aclarar una intervención. El formato definitivo se concretará al solicitar información.',
+      'Una sesión individual de tres horas en Sevilla para revisar un caso, trabajar sobre una situación concreta y ordenar los siguientes pasos. La reserva y el pago se realizan mediante Calendly.',
     outcomes: [
       { title: 'Atención a una situación concreta', description: '' },
       { title: 'Revisión de tu planteamiento', description: '' },
@@ -79,7 +79,7 @@ export const services = [
   {
     code: 'rehabilitacion',
     route: `${oldBase}/rehabilitacion-canina-problemas-conducta/`,
-    title: 'Modificación de comportamiento + rehabilitación',
+    title: 'Modificación de Comportamiento',
     label: 'Comprender antes de intervenir',
     intro:
       'Trabajo personalizado sobre problemas de comportamiento y alteraciones emocionales en Sevilla.',

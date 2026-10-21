@@ -83,9 +83,9 @@ export class DeliveryWorker implements OnModuleInit, OnModuleDestroy {
       await transport.sendMail({
         from: config.SMTP_FROM,
         to: config.NOTIFICATION_EMAIL,
-        replyTo: lead.email,
+        replyTo: lead.email || undefined,
         subject: `Nueva solicitud · ${lead.kind === 'regional' ? 'Edición en su zona' : lead.serviceCode || 'Información'}`,
-        text: `${lead.name}\n${lead.email}\n${lead.phone || ''}\n${lead.city || ''}\n\n${lead.message}\n\nConsulta la solicitud en ${config.PUBLIC_ORIGIN}/admin/`,
+        text: `${lead.name}\n${lead.email || 'Sin email'}\n${lead.phone || ''}\n${lead.city || ''}\n\n${lead.message}\n\nConsulta la solicitud en ${config.PUBLIC_ORIGIN}/admin/`,
       });
     } finally {
       transport.close();

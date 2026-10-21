@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { QuizLeads1792601000000 } from './quiz-leads-migration';
 import { DataSource } from 'typeorm';
 import { config } from '../config';
 import { entities } from './entities';
@@ -11,6 +12,8 @@ import { ServiceCards1792171000000 } from './service-cards-migration';
 import { ServiceOutcomes1792172000000 } from './service-outcomes-migration';
 import { CommunitySkool1792510000000 } from './community-skool-migration';
 import { CommunityBanner1792511000000 } from './community-banner-migration';
+import { CommercialOffers1792520000000 } from './commercial-offers-migration';
+import { CorrectProgramPack1792600000000 } from './correct-program-pack-migration';
 export const databaseOptions = {
   type: 'mysql' as const,
   host: config.DB_HOST,
@@ -31,6 +34,9 @@ export const databaseOptions = {
     ServiceOutcomes1792172000000,
     CommunitySkool1792510000000,
     CommunityBanner1792511000000,
+    CommercialOffers1792520000000,
+    CorrectProgramPack1792600000000,
+    QuizLeads1792601000000,
   ],
   synchronize: false,
 };

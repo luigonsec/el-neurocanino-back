@@ -83,6 +83,14 @@ export const editionSchema = z
     placesAvailable: z.number().int().min(0),
     photos: z.array(mediaPath).max(12),
     calendlyUrl: calendlyUrl.nullish().transform((v) => v || null),
+    paymentLinks: z
+      .array(z.object({ paymentOptionId: z.number().int().positive(), url: externalUrl }))
+      .max(24)
+      .refine(
+        (links) => new Set(links.map((link) => link.paymentOptionId)).size === links.length,
+        'No repitas opciones de pago.',
+      )
+      .optional(),
     published: z.boolean(),
     isDemo: z.boolean(),
   })

@@ -13,6 +13,7 @@ import { config, allowedOrigins } from './config';
 import { databaseOptions } from './database/source';
 import { AuthController, SessionGuard } from './auth/auth';
 import { AdminContentController, PublicContentController } from './content/content';
+import { AdminOffersController, PublicOffersController } from './content/commerce';
 import { AdminLeadsController, LeadsController } from './leads/leads';
 import { CrmAdapter, DatabaseCrmAdapter } from './leads/crm';
 import { DeliveryWorker } from './leads/deliveries';
@@ -35,6 +36,8 @@ class HealthController {
     AuthController,
     AdminContentController,
     PublicContentController,
+    AdminOffersController,
+    PublicOffersController,
     AdminLeadsController,
     LeadsController,
     MediaController,
@@ -71,6 +74,7 @@ async function bootstrap() {
     });
   app.use('/api/v1/auth/login', limiter(10));
   app.use('/api/v1/leads', limiter(15));
+  app.use('/api/v1/quiz-leads', limiter(30));
   app.use('/api/v1/region-requests', limiter(15));
   app.use(
     '/media',
