@@ -1,5 +1,10 @@
 import { editionStatus, madridToday } from '../src/content/edition-status';
-import { editionSchema, serviceSchema, serviceOutcomeSchema } from '../src/validation';
+import {
+  editionSchema,
+  serviceSchema,
+  serviceOutcomeSchema,
+  reviewSchema,
+} from '../src/validation';
 const edition = {
   title: 'Práctica en Sevilla',
   location: 'Campo de trabajo',
@@ -78,5 +83,33 @@ describe('Puntos del recorrido', () => {
       serviceOutcomeSchema.safeParse({ id: -1, title: 'Trabajo en grupo', description: '' })
         .success,
     ).toBe(false);
+  });
+});
+
+describe('Reseñas con fotos', () => {
+  const review = {
+    author: 'Persona real',
+    text: 'Una experiencia de formación muy positiva.',
+    rating: 5,
+    sortOrder: 1,
+    published: true,
+    isDemo: false,
+  };
+  it('mantiene las reseñas anteriores y valida fotos locales y enlaces de autor seguros', () => {
+    expect(reviewSchema.parse(review).photoPath).toBeNull();
+    expect(
+      reviewSchema.safeParse({
+        ...review,
+        photoPath: '/media/avatar.webp',
+        authorUrl: 'https://www.google.com/maps/contrib/123/reviews',
+      }).success,
+    ).toBe(true);
+    expect(
+      reviewSchema.safeParse({ ...review, photoPath: 'https://external.test/avatar.jpg' }).success,
+    ).toBe(false);
+    expect(reviewSchema.safeParse({ ...review, authorUrl: 'javascript:alert(1)' }).success).toBe(
+      false,
+    );
+    expect(reviewSchema.safeParse({ ...review, rating: 6 }).success).toBe(false);
   });
 });

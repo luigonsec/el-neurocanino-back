@@ -135,6 +135,12 @@ export class EditionPaymentLink {
 export class Review {
   @PrimaryGeneratedColumn() id!: number;
   @Column() author!: string;
+  @Column({ name: 'photo_path', type: 'varchar', length: 255, nullable: true }) photoPath!:
+    | string
+    | null;
+  @Column({ name: 'author_url', type: 'varchar', length: 500, nullable: true }) authorUrl!:
+    | string
+    | null;
   @Column({ type: 'text' }) text!: string;
   @Column() rating!: number;
   @Column({ type: 'date', nullable: true }) date!: string | null;

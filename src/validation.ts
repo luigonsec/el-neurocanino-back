@@ -104,6 +104,8 @@ export const editionSchema = z
   });
 export const reviewSchema = z.object({
   author: z.string().trim().min(2).max(255),
+  photoPath: mediaPath.nullish().transform((v) => v || null),
+  authorUrl: externalUrl.nullish().transform((v) => v || null),
   text: z.string().trim().min(10).max(4000),
   rating: z.number().int().min(1).max(5),
   date: date.nullish().transform((v) => v || null),
