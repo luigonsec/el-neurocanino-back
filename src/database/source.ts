@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { ProgramPrices1793180000000 } from './program-prices-migration';
 import { ReviewPhotos1792830000000 } from './review-photos-migration';
 import { QuizLeads1792601000000 } from './quiz-leads-migration';
 import { DataSource } from 'typeorm';
@@ -39,6 +40,7 @@ export const databaseOptions = {
     CorrectProgramPack1792600000000,
     QuizLeads1792601000000,
     ReviewPhotos1792830000000,
+    ProgramPrices1793180000000,
   ],
   synchronize: false,
 };

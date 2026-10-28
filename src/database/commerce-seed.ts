@@ -1,5 +1,5 @@
 import { EntityManager } from 'typeorm';
-import { CommercialOffer, PaymentOption, Service } from './entities';
+import { CommercialOffer, Service } from './entities';
 import { commercialDefaults } from '../content/commerce-data';
 
 export async function seedCommerce(manager: EntityManager) {
@@ -24,19 +24,42 @@ export async function seedCommerce(manager: EntityManager) {
       klarnaEnabled: false,
       services: linked,
     });
-    if (row.options.length)
-      await manager.getRepository(PaymentOption).save(
-        row.options.map((option: any, sortOrder: number) => ({
-          ...option,
-          offerId: offer.id,
-          currency: 'EUR',
-          installmentCount: option.installmentCount || 1,
-          depositCents: option.depositCents || 0,
-          sortOrder,
-          paymentUrl: null,
-          transferInstructions: null,
-          whatsappUrl: null,
-        })),
+    for (const [sortOrder, option] of row.options.entries()) {
+      // Historical schema migrations invoke this seed before the new columns exist.
+      // Use explicit columns so a clean installation can traverse that schema safely.
+      const hasPaymentType =
+        (await manager.query("SHOW COLUMNS FROM payment_options LIKE 'payment_type'")).length > 0;
+      const columns = [
+        'offer_id',
+        'label',
+        'method',
+        'currency',
+        'amount_cents',
+        'installment_count',
+        'deposit_cents',
+        'sort_order',
+      ];
+      const values = [
+        offer.id,
+        option.label,
+        option.method,
+        'EUR',
+        option.amountCents,
+        option.installmentCount || 1,
+        option.depositCents || 0,
+        sortOrder,
+      ];
+      if (hasPaymentType) {
+        columns.push('payment_type', 'balance_cents');
+        values.push(
+          option.paymentType || (option.installmentCount > 1 ? 'installments' : 'full'),
+          option.balanceCents || 0,
+        );
+      }
+      await manager.query(
+        `INSERT INTO payment_options (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`,
+        values,
       );
+    }
   }
 }

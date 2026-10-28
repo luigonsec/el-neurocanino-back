@@ -1,4 +1,6 @@
+import { programs20261028 } from '../src/content/programs-20261028';
 import {
+  paymentTotal,
   offerSchema,
   paymentOptionSchema,
   publicOffer,
@@ -113,5 +115,49 @@ describe('Publicación y contratación de ofertas', () => {
         { paymentOptionId: 1, url: 'https://buy.stripe.com/test' },
       ]),
     ).rejects.toThrow('no corresponde');
+  });
+});
+
+describe('Condiciones comerciales aprobadas', () => {
+  it('calcula exactamente las diez modalidades sin duplicar reservas', () => {
+    const totals = programs20261028.map((p) =>
+      p.options.map((o) => {
+        const parsed = paymentOptionSchema.parse({
+          ...o,
+          paymentUrl: null,
+          transferInstructions: null,
+          whatsappUrl: null,
+        });
+        return paymentTotal(parsed);
+      }),
+    );
+    expect(totals).toEqual([
+      [100000, 111000, 118800, 105000],
+      [150000, 150000],
+      [200000, 209000, 213800, 204500],
+    ]);
+  });
+  it('separa reservas, cuotas y pagos completos y conserva clientes API anteriores', () => {
+    const reservation = {
+      ...option,
+      paymentType: 'reservation',
+      installmentCount: 1,
+      amountCents: 35000,
+      depositCents: 0,
+      balanceCents: 115000,
+    };
+    expect(paymentOptionSchema.safeParse(reservation).success).toBe(true);
+    expect(
+      publicOffer({ ...offer, provisional: false, options: [reservation as any] }).options[0]
+        .totalCents,
+    ).toBe(150000);
+    for (const invalid of [
+      { balanceCents: 0 },
+      { installmentCount: 3 },
+      { depositCents: 35000 },
+      { paymentType: 'full' },
+    ])
+      expect(paymentOptionSchema.safeParse({ ...reservation, ...invalid }).success).toBe(false);
+    expect(paymentOptionSchema.safeParse(option).success).toBe(true);
   });
 });

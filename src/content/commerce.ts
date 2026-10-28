@@ -38,6 +38,8 @@ export const paymentOptionSchema = z
     amountCents: z.number().int().min(1).max(100000000),
     installmentCount: z.number().int().min(1).max(60).default(1),
     depositCents: z.number().int().min(0).max(100000000).default(0),
+    paymentType: z.enum(['full', 'installments', 'reservation']).optional(),
+    balanceCents: z.number().int().min(0).max(100000000).default(0),
     paymentUrl: nullableUrl(externalUrl),
     transferInstructions: optionalText(4000),
     whatsappUrl: nullableUrl(
@@ -48,6 +50,19 @@ export const paymentOptionSchema = z
     ),
   })
   .superRefine((v, c) => {
+    const kind = v.paymentType || (v.installmentCount > 1 ? 'installments' : 'full');
+    if (
+      (kind === 'reservation' &&
+        (v.installmentCount !== 1 || v.depositCents !== 0 || v.balanceCents <= 0)) ||
+      (kind !== 'reservation' && v.balanceCents !== 0) ||
+      (kind === 'full' && (v.installmentCount !== 1 || v.depositCents !== 0)) ||
+      (kind === 'installments' && v.installmentCount < 2)
+    )
+      c.addIssue({
+        code: 'custom',
+        path: ['paymentType'],
+        message: 'Revisa el tipo de pago, las cuotas y el saldo pendiente.',
+      });
     if (v.method === 'stripe' && v.paymentUrl && !stripeUrl.safeParse(v.paymentUrl).success)
       c.addIssue({
         code: 'custom',
@@ -157,7 +172,10 @@ export function publicOffer(offer: CommercialOffer, env = config.APP_ENV) {
       ? []
       : offer.options.map((option) => ({
           ...option,
-          totalCents: option.amountCents * option.installmentCount + option.depositCents,
+          paymentType:
+            option.paymentType || (option.installmentCount > 1 ? 'installments' : 'full'),
+          balanceCents: option.balanceCents || 0,
+          totalCents: paymentTotal(option),
           paymentUrl:
             offer.provisional || requiresEdition
               ? null
@@ -168,6 +186,15 @@ export function publicOffer(offer: CommercialOffer, env = config.APP_ENV) {
           transferInstructions: offer.provisional ? null : option.transferInstructions,
         })),
   };
+}
+export function paymentTotal(
+  option: Pick<PaymentOption, 'amountCents' | 'installmentCount' | 'depositCents'> & {
+    balanceCents?: number;
+  },
+) {
+  return (
+    option.amountCents * option.installmentCount + option.depositCents + (option.balanceCents || 0)
+  );
 }
 const relations = { services: true, options: true } as const;
 const ordering = { id: 'ASC', options: { sortOrder: 'ASC', id: 'ASC' } } as const;
@@ -256,6 +283,13 @@ export class AdminOffersController {
       if (values.route && (await manager.getRepository(Service).existsBy({ route: values.route })))
         throw new BadRequestException('La ruta ya pertenece a un servicio.');
       const { options, serviceCodes, ...fields } = values;
+      if (
+        options.some((o) => o.paymentType === 'reservation') &&
+        !serviceCodes.includes('presencial')
+      )
+        throw new BadRequestException(
+          'La reserva con saldo al comenzar corresponde a una edición presencial.',
+        );
       const services = await manager.getRepository(Service).findBy({ code: In(serviceCodes) });
       if (services.length !== serviceCodes.length)
         throw new BadRequestException('Selecciona servicios existentes.');
@@ -269,7 +303,12 @@ export class AdminOffersController {
       if (removed.length) await optionsRepo.delete({ offerId: saved.id, id: In(removed) });
       if (options.length)
         await optionsRepo.save(
-          options.map((o, sortOrder) => ({ ...o, offerId: saved.id, sortOrder })),
+          options.map((o, sortOrder) => ({
+            ...o,
+            paymentType: o.paymentType || (o.installmentCount > 1 ? 'installments' : 'full'),
+            offerId: saved.id,
+            sortOrder,
+          })),
         );
       const offer = await repo.findOneOrFail({
         where: { id: saved.id },

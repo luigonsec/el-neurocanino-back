@@ -106,6 +106,11 @@ export class PaymentOption {
   @Column({ name: 'amount_cents' }) amountCents!: number;
   @Column({ name: 'installment_count', default: 1 }) installmentCount!: number;
   @Column({ name: 'deposit_cents', default: 0 }) depositCents!: number;
+  @Column({ name: 'payment_type', length: 20, default: 'full' }) paymentType!:
+    | 'full'
+    | 'installments'
+    | 'reservation';
+  @Column({ name: 'balance_cents', default: 0 }) balanceCents!: number;
   @Column({ name: 'payment_url', type: 'varchar', length: 500, nullable: true }) paymentUrl!:
     | string
     | null;

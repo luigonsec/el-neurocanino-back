@@ -1,3 +1,4 @@
+import { programs20261028 } from './programs-20261028';
 export const DEMO_CALENDLY_URL = 'https://calendly.com/iris-cloud/conoce-iris-cloud';
 export const PACK_ROUTE = '/servicios/programa-online-presencial/';
 export const commercialDefaults = [
@@ -9,38 +10,8 @@ export const commercialDefaults = [
     serviceCodes: ['comunidad'],
     options: [],
   },
-  {
-    code: 'online',
-    title: 'Programa Online',
-    description:
-      'Formación online alojada en Skool. Elige pago completo por transferencia o doce mensualidades mediante Stripe. También puedes concertar una cita de información y admisión.',
-    serviceCodes: ['online'],
-    options: [
-      { label: 'Pago completo por transferencia', method: 'transfer', amountCents: 100000 },
-      {
-        label: 'Pago mensual con Stripe',
-        method: 'stripe',
-        amountCents: 9900,
-        installmentCount: 12,
-      },
-    ],
-  },
-  {
-    code: 'presencial',
-    title: 'Programa presencial de 4 días',
-    description:
-      'Cuatro días de formación presencial. Elige una edición abierta con plazas disponibles para consultar las opciones de contratación.',
-    serviceCodes: ['presencial'],
-    options: [
-      { label: 'Pago completo por transferencia', method: 'transfer', amountCents: 150000 },
-      {
-        label: 'Tres mensualidades con Stripe',
-        method: 'stripe',
-        amountCents: 55000,
-        installmentCount: 3,
-      },
-    ],
-  },
+  { ...programs20261028.find((p) => p.code === 'online')!, serviceCodes: ['online'] },
+  { ...programs20261028.find((p) => p.code === 'presencial')!, serviceCodes: ['presencial'] },
   {
     code: 'intensiva',
     title: 'Sesión Intensiva en Sevilla',
@@ -70,24 +41,7 @@ export const commercialDefaults = [
     ],
   },
   {
-    code: 'online-presencial',
-    title: 'Programa Online + Programa presencial de 4 días',
-    route: PACK_ROUTE,
-    seoTitle: 'Pack Programa Online + Presencial de 4 días | El Neurocanino',
-    seoDescription:
-      'Combina el Programa Online con cuatro días de formación presencial. Conoce el pack, sus opciones de pago y elige tu edición.',
-    description:
-      'Combina la formación online con una edición del programa presencial de cuatro días. La contratación se vincula a la edición elegida.',
+    ...programs20261028.find((p) => p.code === 'online-presencial')!,
     serviceCodes: ['online', 'presencial'],
-    options: [
-      { label: 'Pago completo', method: 'transfer', amountCents: 200000 },
-      {
-        label: 'Reserva y doce mensualidades con Stripe',
-        method: 'stripe',
-        amountCents: 14900,
-        installmentCount: 12,
-        depositCents: 35000,
-      },
-    ],
   },
 ] as const;
