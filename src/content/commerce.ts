@@ -295,6 +295,17 @@ export class AdminOffersController {
         throw new BadRequestException('Selecciona servicios existentes.');
       const optionsRepo = manager.getRepository(PaymentOption);
       const existing = id ? await optionsRepo.findBy({ offerId: id }) : [];
+      if (
+        options.some(
+          (o) =>
+            o.id &&
+            !o.paymentType &&
+            existing.some((e) => e.id === o.id && e.paymentType === 'reservation'),
+        )
+      )
+        throw new BadRequestException(
+          'Actualiza el panel antes de editar una reserva con saldo pendiente.',
+        );
       if (options.some((o) => o.id && !existing.some((e) => e.id === o.id)))
         throw new BadRequestException('Una opción de pago no pertenece a esta oferta.');
       const saved = await repo.save({ ...current, ...fields, services });
