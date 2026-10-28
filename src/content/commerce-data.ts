@@ -1,3 +1,4 @@
+import { programPresentation20261028 } from './program-presentation-20261028';
 import { programs20261028 } from './programs-20261028';
 export const DEMO_CALENDLY_URL = 'https://calendly.com/iris-cloud/conoce-iris-cloud';
 export const PACK_ROUTE = '/servicios/programa-online-presencial/';
@@ -10,8 +11,16 @@ export const commercialDefaults = [
     serviceCodes: ['comunidad'],
     options: [],
   },
-  { ...programs20261028.find((p) => p.code === 'online')!, serviceCodes: ['online'] },
-  { ...programs20261028.find((p) => p.code === 'presencial')!, serviceCodes: ['presencial'] },
+  {
+    ...programs20261028.find((p) => p.code === 'online')!,
+    ...programPresentation20261028.find((p) => p.code === 'online')!,
+    serviceCodes: ['online'],
+  },
+  {
+    ...programs20261028.find((p) => p.code === 'presencial')!,
+    ...programPresentation20261028.find((p) => p.code === 'presencial')!,
+    serviceCodes: ['presencial'],
+  },
   {
     code: 'intensiva',
     title: 'Sesión Intensiva en Sevilla',
@@ -42,6 +51,7 @@ export const commercialDefaults = [
   },
   {
     ...programs20261028.find((p) => p.code === 'online-presencial')!,
+    ...programPresentation20261028.find((p) => p.code === 'online-presencial')!,
     serviceCodes: ['online', 'presencial'],
   },
 ] as const;

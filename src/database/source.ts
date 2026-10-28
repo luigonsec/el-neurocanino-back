@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { ProgramPresentation1793182000000 } from './program-presentation-migration';
 import { ConfirmedCalendars1793181000000 } from './confirmed-calendars-migration';
 import { ProgramPrices1793180000000 } from './program-prices-migration';
 import { ReviewPhotos1792830000000 } from './review-photos-migration';
@@ -43,6 +44,7 @@ export const databaseOptions = {
     ReviewPhotos1792830000000,
     ProgramPrices1793180000000,
     ConfirmedCalendars1793181000000,
+    ProgramPresentation1793182000000,
   ],
   synchronize: false,
 };
