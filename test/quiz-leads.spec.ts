@@ -56,7 +56,7 @@ it('valida consentimiento, teléfono, categorías y restricciones del recorrido'
   ])
     expect(quizLeadSchema.safeParse({ ...lead, ...change }).success).toBe(false);
 });
-it('permite mixto con desplazamiento y atención individual únicamente a residentes', () => {
+it('permite mixto con desplazamiento y compatibilidad con las respuestas de residencia anteriores', () => {
   expect(
     quizLeadSchema.safeParse({
       ...lead,
@@ -119,4 +119,45 @@ it('acepta profesionales y futuros profesionales con contacto internacional y va
       answers: { ...input.answers, recommendation: 'presencial' },
     }).success,
   ).toBe(false);
+});
+
+it('permite atención individual a quien confirma asistencia aunque no resida en Sevilla', () => {
+  const answers = {
+    ...lead.answers,
+    format: 'presencial',
+    modality: 'extensive',
+    sevilleAttendance: 'yes',
+    individualService: 'educacion',
+    interest: 'educacion',
+    recommendation: 'educacion',
+  };
+  const parsed = quizLeadSchema.parse({ ...lead, answers });
+  expect('sevilleAttendance' in parsed.answers && parsed.answers.sevilleAttendance).toBe('yes');
+  expect(
+    quizLeadSchema.safeParse({ ...lead, answers: { ...answers, sevilleAttendance: 'no' } }).success,
+  ).toBe(false);
+  expect(
+    quizLeadSchema.safeParse({
+      ...lead,
+      answers: { ...answers, investment: 'entry', recommendation: 'comunidad' },
+    }).success,
+  ).toBe(true);
+});
+it('rechaza respuestas libres que excedan los límites del cuestionario', () => {
+  for (const [key, max] of [
+    ['obstacle', 350],
+    ['desired', 350],
+    ['dogBreed', 80],
+  ] as const) {
+    expect(
+      quizLeadSchema.safeParse({ ...lead, answers: { ...lead.answers, [key]: 'a'.repeat(max) } })
+        .success,
+    ).toBe(true);
+    expect(
+      quizLeadSchema.safeParse({
+        ...lead,
+        answers: { ...lead.answers, [key]: 'a'.repeat(max + 1) },
+      }).success,
+    ).toBe(false);
+  }
 });

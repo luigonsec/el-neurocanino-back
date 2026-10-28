@@ -18,15 +18,17 @@ const personalAnswers = z
   .object({
     profile: z.literal('personal').default('personal'),
     dogAge: short,
-    dogBreed: short,
-    obstacle: z.string().trim().min(1).max(2000),
-    desired: z.string().trim().min(1).max(2000),
+    dogBreed: z.string().trim().min(1).max(80),
+    obstacle: z.string().trim().min(1).max(350),
+    desired: z.string().trim().min(1).max(350),
     timing: z.enum(['now', 'month', 'browsing']),
     format: z.enum(['online', 'presencial', 'mixed']),
     modality: z.enum(['intensive', 'extensive']).optional(),
     fourDayTravel: z.enum(['yes', 'no']).optional(),
     combine: z.enum(['mixed', 'presencial']).optional(),
+    // Legacy residence answers remain readable for existing contacts and older clients.
     sevilleResident: z.enum(['yes', 'no']).optional(),
+    sevilleAttendance: z.enum(['yes', 'no']).optional(),
     alternativeFormat: z.enum(['online', 'mixed']).optional(),
     onlineFallback: z.literal('yes').optional(),
     individualService: z.enum(['intensiva', 'educacion', 'rehabilitacion']).optional(),
@@ -43,12 +45,13 @@ const personalAnswers = z
     ]),
   })
   .superRefine((a, c) => {
+    const sevilleAttendance = a.sevilleAttendance ?? a.sevilleResident;
     let interest: string | undefined;
     if (a.format === 'online') interest = 'online';
     else if (a.format === 'presencial' && a.modality === 'extensive') {
-      if (a.sevilleResident === 'yes') interest = a.individualService;
-      else if (a.sevilleResident === 'no' && a.alternativeFormat === 'online') interest = 'online';
-      else if (a.sevilleResident === 'no' && a.alternativeFormat === 'mixed')
+      if (sevilleAttendance === 'yes') interest = a.individualService;
+      else if (sevilleAttendance === 'no' && a.alternativeFormat === 'online') interest = 'online';
+      else if (sevilleAttendance === 'no' && a.alternativeFormat === 'mixed')
         interest =
           a.fourDayTravel === 'yes'
             ? 'online-presencial'
@@ -84,7 +87,7 @@ const professionalAnswers = z
     profession: z.enum(['training', 'care', 'other']).optional(),
     experience: z.enum(['under-one', 'one-five', 'over-five']).optional(),
     previousTraining: z.enum(['yes', 'no']).optional(),
-    trainingDetails: z.string().trim().min(1).max(2000).optional(),
+    trainingDetails: z.string().trim().min(1).max(350).optional(),
     goal: z.enum(['theory', 'practice', 'both']).optional(),
     beginnerGoal: z.enum(['online', 'pack']).optional(),
     budget: z.enum(['low', 'medium', 'high']),
@@ -122,7 +125,7 @@ const professionalAnswers = z
 export const quizLeadSchema = z
   .object({
     submissionKey: z.uuid(),
-    name: z.string().trim().min(2).max(255),
+    name: z.string().trim().min(2).max(100),
     phone: z
       .string()
       .trim()

@@ -82,7 +82,12 @@ export class LeadsController {
         serviceCode:
           b.answers.recommendation === 'online-presencial' ? 'online' : b.answers.recommendation,
         quizContext: {
-          version: b.answers.profile === 'personal' ? 'personal-v2' : 'professional-v1',
+          version:
+            b.answers.profile === 'personal'
+              ? b.answers.sevilleResident && !b.answers.sevilleAttendance
+                ? 'personal-v2'
+                : 'personal-v3'
+              : 'professional-v1',
           phoneCountry: b.phoneCountry,
           ...b.answers,
           ...(b.answers.profile === 'personal'
