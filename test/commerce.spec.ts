@@ -174,3 +174,21 @@ it('publica la llamada de aclaración presencial sin habilitar checkout genéric
   expect(result.options[0].paymentUrl).toBeNull();
   expect(result.klarnaEnabled).toBe(false);
 });
+
+it('valida reserva separada y bloquea el falso pago único de 2.000 €/mes', () => {
+  const valid = { ...option, depositPaymentUrl: 'https://buy.stripe.com/reserve' };
+  expect(paymentOptionSchema.safeParse(valid).success).toBe(true);
+  for (const patch of [
+    { depositCents: 0 },
+    { depositPaymentUrl: 'https://stripe.com.evil.test/pay' },
+    { paymentUrl: 'https://buy.stripe.com/bJe8wRacM78L9Yn3h3cs80c?x=1' },
+  ])
+    expect(paymentOptionSchema.safeParse({ ...valid, ...patch }).success).toBe(false);
+  const result = publicOffer({
+    ...offer,
+    code: 'intensiva',
+    provisional: false,
+    services: [{ code: 'intensiva' } as any],
+  });
+  expect(result.bookingUrl).toBeNull();
+});

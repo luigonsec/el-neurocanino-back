@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Inject,
   NotFoundException,
   Param,
@@ -13,10 +14,19 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBody, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiCookieAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { DataSource, EntityManager, In } from 'typeorm';
 import { z } from 'zod';
-import { CommercialOffer, EditionPaymentLink, PaymentOption, Service } from '../database/entities';
+import { randomUUID } from 'node:crypto';
+import { editionStatus } from './edition-status';
+import { blockedPaymentUrls } from './stripe-links-20261028';
+import {
+  CommercialOffer,
+  Edition,
+  EditionPaymentLink,
+  PaymentOption,
+  Service,
+} from '../database/entities';
 import { SessionGuard } from '../auth/auth';
 import { config } from '../config';
 import { apiSchema, calendlyUrl, externalUrl, optionalText, parse } from '../validation';
@@ -25,7 +35,8 @@ import { DEMO_CALENDLY_URL, PACK_ROUTE } from './commerce-data';
 export const stripeUrl = externalUrl.refine(
   (value) =>
     ['buy.stripe.com', 'checkout.stripe.com'].includes(new URL(value).hostname) &&
-    !new URL(value).username,
+    !new URL(value).username &&
+    !blockedPaymentUrls.some((blocked) => new URL(blocked).pathname === new URL(value).pathname),
   'Usa un enlace de pago alojado en Stripe.',
 );
 const nullableUrl = (schema: z.ZodType<string>) => schema.nullish().transform((v) => v || null);
@@ -41,6 +52,7 @@ export const paymentOptionSchema = z
     paymentType: z.enum(['full', 'installments', 'reservation']).optional(),
     balanceCents: z.number().int().min(0).max(100000000).default(0),
     paymentUrl: nullableUrl(externalUrl),
+    depositPaymentUrl: stripeUrl.nullable().optional(),
     transferInstructions: optionalText(4000),
     whatsappUrl: nullableUrl(
       externalUrl.refine(
@@ -68,6 +80,15 @@ export const paymentOptionSchema = z
         code: 'custom',
         path: ['paymentUrl'],
         message: 'Usa un enlace de pago alojado en Stripe.',
+      });
+    if (
+      v.depositPaymentUrl &&
+      (v.method !== 'stripe' || v.depositCents <= 0 || kind !== 'installments')
+    )
+      c.addIssue({
+        code: 'custom',
+        path: ['depositPaymentUrl'],
+        message: 'El enlace de reserva separado corresponde a cuotas Stripe con reserva inicial.',
       });
     if (v.method === 'calendly' && v.paymentUrl && !calendlyUrl.safeParse(v.paymentUrl).success)
       c.addIssue({ code: 'custom', path: ['paymentUrl'], message: 'Usa un enlace de Calendly.' });
@@ -153,7 +174,9 @@ export function publicOffer(offer: CommercialOffer, env = config.APP_ENV) {
   const candidate = offer.bookingUrl || legacy;
   const bookingUrl =
     safeBooking(candidate, env) ||
-    (!requiresEdition && env !== 'production' && offer.code !== 'comunidad'
+    (!requiresEdition &&
+    env !== 'production' &&
+    !['comunidad', 'intensiva', 'educacion'].includes(offer.code)
       ? DEMO_CALENDLY_URL
       : null);
   const hidePrices = env === 'production' && offer.provisional;
@@ -185,6 +208,14 @@ export function publicOffer(offer: CommercialOffer, env = config.APP_ENV) {
               : option.method === 'calendly'
                 ? safeBooking(option.paymentUrl, env)
                 : option.paymentUrl,
+          depositPaymentUrl:
+            offer.provisional || requiresEdition ? null : option.depositPaymentUrl || null,
+          hasPaymentLink: Boolean(
+            !offer.provisional &&
+              option.method === 'stripe' &&
+              stripeUrl.safeParse(option.paymentUrl).success &&
+              (!option.depositCents || stripeUrl.safeParse(option.depositPaymentUrl).success),
+          ),
           whatsappUrl: offer.provisional ? null : option.whatsappUrl,
           transferInstructions: offer.provisional ? null : option.transferInstructions,
         })),
@@ -235,12 +266,93 @@ export async function saveEditionPaymentLinks(
     await manager.getRepository(EditionPaymentLink).save(links.map((l) => ({ ...l, editionId })));
 }
 
+export async function resolvePaymentDestinations(
+  db: DataSource,
+  code: string,
+  optionId: number,
+  editionId?: number,
+) {
+  const offer = await db
+    .getRepository(CommercialOffer)
+    .findOne({ where: { code, published: true }, relations });
+  if (!offer) throw new NotFoundException('Oferta no disponible.');
+  const option = offer.options.find((o) => o.id === optionId);
+  if (!option) throw new NotFoundException('La modalidad no pertenece a esta oferta.');
+  if (offer.provisional) return { paymentUrl: null, depositPaymentUrl: null };
+  let mainUrl = option.paymentUrl;
+  if (offer.services.some((s) => s.code === 'presencial')) {
+    if (!editionId) throw new BadRequestException('Selecciona una edición para continuar.');
+    const edition = await db
+      .getRepository(Edition)
+      .findOne({ where: { id: editionId, published: true }, relations: { paymentLinks: true } });
+    if (
+      !edition ||
+      (config.APP_ENV === 'production' && edition.isDemo) ||
+      editionStatus(edition) === 'closed' ||
+      edition.placesAvailable <= 0
+    )
+      throw new BadRequestException(
+        'Esta edición ya no está disponible. Elige otra edición o consulta las próximas fechas.',
+      );
+    mainUrl = edition.paymentLinks.find((l) => l.paymentOptionId === option.id)?.url || mainUrl;
+  }
+  const canPay =
+    option.method === 'stripe' &&
+    stripeUrl.safeParse(mainUrl).success &&
+    (!option.depositCents || stripeUrl.safeParse(option.depositPaymentUrl).success);
+  const reference = `web-${code}-${option.id}-${editionId || 0}-${randomUUID()}`;
+  const destination = (url: string) => {
+    const target = new URL(url);
+    target.searchParams.set('client_reference_id', reference);
+    return target.href;
+  };
+  return {
+    paymentUrl: canPay ? destination(mainUrl!) : null,
+    depositPaymentUrl:
+      canPay && option.depositCents ? destination(option.depositPaymentUrl!) : null,
+    amountCents: option.amountCents,
+    depositCents: option.depositCents,
+    totalCents: paymentTotal(option),
+    installmentCount: option.installmentCount,
+    editionId: editionId || null,
+  };
+}
+
 @ApiTags('Ofertas públicas')
 @Controller('offers')
 export class PublicOffersController {
   constructor(@Inject(DataSource) private db: DataSource) {}
   @Get() async list(@Query('service') service?: string) {
     return (await findOffers(this.db, service)).map((o) => publicOffer(o));
+  }
+  @Get(':code/payment-options/:optionId/checkout')
+  @Header('Cache-Control', 'no-store')
+  @ApiQuery({
+    name: 'editionId',
+    required: false,
+    type: Number,
+    description:
+      'Edición presencial abierta con plazas, obligatoria para Presencial y Programa completo.',
+  })
+  async checkout(
+    @Param('code') code: string,
+    @Param('optionId', ParseIntPipe) optionId: number,
+    @Query('editionId') editionInput?: string,
+  ) {
+    if (editionInput !== undefined && !/^[1-9]\d*$/.test(editionInput))
+      throw new BadRequestException('Edición inválida.');
+    if (
+      !Number.isSafeInteger(optionId) ||
+      optionId <= 0 ||
+      (editionInput && !Number.isSafeInteger(Number(editionInput)))
+    )
+      throw new BadRequestException('Identificador inválido.');
+    return resolvePaymentDestinations(
+      this.db,
+      code,
+      optionId,
+      editionInput ? Number(editionInput) : undefined,
+    );
   }
   @Get(':code') async get(@Param('code') code: string) {
     const offer = await this.db
@@ -320,6 +432,12 @@ export class AdminOffersController {
           options.map((o, sortOrder) => ({
             ...o,
             paymentType: o.paymentType || (o.installmentCount > 1 ? 'installments' : 'full'),
+            depositPaymentUrl:
+              o.depositCents > 0
+                ? o.depositPaymentUrl === undefined
+                  ? existing.find((e) => e.id === o.id)?.depositPaymentUrl || null
+                  : o.depositPaymentUrl
+                : null,
             offerId: saved.id,
             sortOrder,
           })),

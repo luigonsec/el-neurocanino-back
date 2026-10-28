@@ -114,6 +114,8 @@ export class PaymentOption {
   @Column({ name: 'payment_url', type: 'varchar', length: 500, nullable: true }) paymentUrl!:
     | string
     | null;
+  @Column({ name: 'deposit_payment_url', type: 'varchar', length: 500, nullable: true })
+  depositPaymentUrl!: string | null;
   @Column({ name: 'transfer_instructions', type: 'text', nullable: true }) transferInstructions!:
     | string
     | null;

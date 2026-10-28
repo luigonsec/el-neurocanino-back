@@ -21,7 +21,7 @@ export async function seedCommerce(manager: EntityManager) {
       seoDescription: row.seoDescription || null,
       published: true,
       provisional: Boolean(row.provisional),
-      bookingUrl: confirmedBookings[row.code] || null,
+      bookingUrl: row.code === 'intensiva' ? null : confirmedBookings[row.code] || null,
       klarnaEnabled: false,
       services: linked,
     });
@@ -39,6 +39,7 @@ export async function seedCommerce(manager: EntityManager) {
         'installment_count',
         'deposit_cents',
         'sort_order',
+        'payment_url',
       ];
       const values = [
         offer.id,
@@ -49,6 +50,7 @@ export async function seedCommerce(manager: EntityManager) {
         option.installmentCount || 1,
         option.depositCents || 0,
         sortOrder,
+        option.paymentUrl || null,
       ];
       if (hasPaymentType) {
         columns.push('payment_type', 'balance_cents');
@@ -56,6 +58,12 @@ export async function seedCommerce(manager: EntityManager) {
           option.paymentType || (option.installmentCount > 1 ? 'installments' : 'full'),
           option.balanceCents || 0,
         );
+      }
+      if (
+        (await manager.query("SHOW COLUMNS FROM payment_options LIKE 'deposit_payment_url'")).length
+      ) {
+        columns.push('deposit_payment_url');
+        values.push(option.depositPaymentUrl || null);
       }
       await manager.query(
         `INSERT INTO payment_options (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`,

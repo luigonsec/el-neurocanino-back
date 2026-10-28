@@ -5,6 +5,7 @@ import { serviceSeoTitles } from '../content/service-seo';
 import { serviceCardImages } from '../content/service-card-images';
 import { config } from '../config';
 import { servicePresentation20261028 } from '../content/program-presentation-20261028';
+import { consultation20261028 } from '../content/stripe-links-20261028';
 import { seedCommerce } from './commerce-seed';
 export async function seed(db: DataSource) {
   for (const service of services) {
@@ -14,14 +15,18 @@ export async function seed(db: DataSource) {
       const saved = await manager.getRepository(Service).save({
         ...values,
         ...servicePresentation20261028.find((p) => p.code === values.code),
+        ...(values.code === 'intensiva' ? consultation20261028 : {}),
         cardImage: serviceCardImages[service.code] || null,
         actionMode: service.code === 'comunidad' ? 'external' : 'contact',
         actionUrl: service.code === 'comunidad' ? 'https://www.skool.com/elneurocanino' : null,
         seoTitle:
           servicePresentation20261028.find((p) => p.code === service.code)?.seoTitle ||
-          serviceSeoTitles[service.code],
+          (service.code === 'intensiva'
+            ? consultation20261028.seoTitle
+            : serviceSeoTitles[service.code]),
         seoDescription:
-          servicePresentation20261028.find((p) => p.code === service.code)?.seoDescription || null,
+          servicePresentation20261028.find((p) => p.code === service.code)?.seoDescription ||
+          (service.code === 'intensiva' ? consultation20261028.seoDescription : null),
       });
       await manager
         .getRepository(ServiceOutcome)

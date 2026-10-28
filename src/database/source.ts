@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { StripeLinks1793183000000 } from './stripe-links-migration';
 import { ProgramPresentation1793182000000 } from './program-presentation-migration';
 import { ConfirmedCalendars1793181000000 } from './confirmed-calendars-migration';
 import { ProgramPrices1793180000000 } from './program-prices-migration';
@@ -45,6 +46,7 @@ export const databaseOptions = {
     ProgramPrices1793180000000,
     ConfirmedCalendars1793181000000,
     ProgramPresentation1793182000000,
+    StripeLinks1793183000000,
   ],
   synchronize: false,
 };
