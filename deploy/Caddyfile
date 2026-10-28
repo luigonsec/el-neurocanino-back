@@ -5,6 +5,15 @@
     Referrer-Policy strict-origin-when-cross-origin
     Permissions-Policy "camera=(), microphone=(), geolocation=()"
   }
+  # Keep legacy contact links as a single permanent redirect to the landing form.
+  @legacyContact path /contacto /contacto/
+  handle @legacyContact {
+    route {
+      @contactWithQuery expression `{http.request.uri.query} != ""`
+      redir @contactWithQuery "/?{http.request.uri.query}#contacto" 301
+      redir * "/#contacto" 301
+    }
+  }
   @api path /api/* /media/*
   handle @api {
     reverse_proxy backend:3000
