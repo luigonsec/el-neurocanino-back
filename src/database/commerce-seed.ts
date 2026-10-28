@@ -1,3 +1,4 @@
+import { confirmedBookings } from '../content/booking-defaults';
 import { EntityManager } from 'typeorm';
 import { CommercialOffer, Service } from './entities';
 import { commercialDefaults } from '../content/commerce-data';
@@ -20,7 +21,7 @@ export async function seedCommerce(manager: EntityManager) {
       seoDescription: row.seoDescription || null,
       published: true,
       provisional: Boolean(row.provisional),
-      bookingUrl: null,
+      bookingUrl: confirmedBookings[row.code] || null,
       klarnaEnabled: false,
       services: linked,
     });

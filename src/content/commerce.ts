@@ -151,10 +151,11 @@ export function publicOffer(offer: CommercialOffer, env = config.APP_ENV) {
       ? offer.services[0].actionUrl
       : null;
   const candidate = offer.bookingUrl || legacy;
-  const bookingUrl = requiresEdition
-    ? null
-    : safeBooking(candidate, env) ||
-      (env !== 'production' && offer.code !== 'comunidad' ? DEMO_CALENDLY_URL : null);
+  const bookingUrl =
+    safeBooking(candidate, env) ||
+    (!requiresEdition && env !== 'production' && offer.code !== 'comunidad'
+      ? DEMO_CALENDLY_URL
+      : null);
   const hidePrices = env === 'production' && offer.provisional;
   return {
     ...offer,
@@ -167,7 +168,9 @@ export function publicOffer(offer: CommercialOffer, env = config.APP_ENV) {
     requiresEdition,
     bookingUrl,
     bookingIsDemo: isDemoBooking(bookingUrl),
-    klarnaEnabled: Boolean(offer.klarnaEnabled && bookingUrl && !isDemoBooking(bookingUrl)),
+    klarnaEnabled: Boolean(
+      !requiresEdition && offer.klarnaEnabled && bookingUrl && !isDemoBooking(bookingUrl),
+    ),
     options: hidePrices
       ? []
       : offer.options.map((option) => ({

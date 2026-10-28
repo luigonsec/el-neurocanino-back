@@ -161,3 +161,16 @@ describe('Condiciones comerciales aprobadas', () => {
     expect(paymentOptionSchema.safeParse(option).success).toBe(true);
   });
 });
+
+it('publica la llamada de aclaración presencial sin habilitar checkout genérico ni reservar plazas', () => {
+  const url = 'https://calendly.com/adiestracaninos/asesoramiento-personalizado';
+  const result = publicOffer(
+    { ...offer, provisional: false, bookingUrl: url, services: [{ code: 'presencial' } as any] },
+    'production',
+  );
+  expect(result.bookingUrl).toBe(url);
+  expect(result.bookingIsDemo).toBe(false);
+  expect(result.requiresEdition).toBe(true);
+  expect(result.options[0].paymentUrl).toBeNull();
+  expect(result.klarnaEnabled).toBe(false);
+});
