@@ -56,6 +56,16 @@ describe('Ediciones y acciones', () => {
     expect(
       serviceSchema.safeParse({ ...s, actionUrl: 'https://calendly.com/persona/sesion' }).success,
     ).toBe(true);
+    const edited = serviceSchema.parse({
+      ...s,
+      cardSubtitle: '  Un subtítulo  ',
+      cardDescription: '  Una descripción para la landing.  ',
+    });
+    expect(edited.cardSubtitle).toBe('Un subtítulo');
+    expect(edited.cardDescription).toBe('Una descripción para la landing.');
+    expect(serviceSchema.parse({ ...s, cardSubtitle: '' }).cardSubtitle).toBeNull();
+    expect(serviceSchema.parse(s).cardSubtitle).toBeUndefined();
+    expect(serviceSchema.safeParse({ ...s, cardSubtitle: 'x'.repeat(256) }).success).toBe(false);
   });
 });
 

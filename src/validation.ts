@@ -46,6 +46,8 @@ export const serviceSchema = z
     title: z.string().trim().min(2).max(255),
     label: z.string().trim().min(2).max(255),
     intro: z.string().trim().min(10).max(2000),
+    cardSubtitle: optionalText().optional(),
+    cardDescription: optionalText(2000).optional(),
     description: z.string().trim().min(10).max(10000),
     outcomes: z
       .array(serviceOutcomeSchema)

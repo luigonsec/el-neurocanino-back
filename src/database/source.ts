@@ -1,4 +1,7 @@
 import 'reflect-metadata';
+import { ServiceContentSync1793186000000 } from './service-content-sync-migration';
+import { LandingCards1793185000000 } from './landing-cards-migration';
+import { Purchases1793184000000 } from './purchases-migration';
 import { StripeLinks1793183000000 } from './stripe-links-migration';
 import { ProgramPresentation1793182000000 } from './program-presentation-migration';
 import { ConfirmedCalendars1793181000000 } from './confirmed-calendars-migration';
@@ -47,6 +50,9 @@ export const databaseOptions = {
     ConfirmedCalendars1793181000000,
     ProgramPresentation1793182000000,
     StripeLinks1793183000000,
+    Purchases1793184000000,
+    LandingCards1793185000000,
+    ServiceContentSync1793186000000,
   ],
   synchronize: false,
 };

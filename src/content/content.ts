@@ -38,7 +38,7 @@ function withBooking(service: Service, offers: CommercialOffer[]) {
 export class PublicContentController {
   constructor(@Inject(DataSource) private db: DataSource) {}
   @Get('public-config') publicConfig() {
-    return { privacyVersion };
+    return { checkoutMode: config.STRIPE_MODE, privacyVersion };
   }
   @Get('services') async listServices() {
     const rows = await this.db.getRepository(Service).find({
@@ -72,7 +72,10 @@ export class PublicContentController {
         status: editionStatus(e),
         calendlyUrl: safeBooking(e.calendlyUrl),
         paymentLinks:
-          editionStatus(e) === 'closed' || e.placesAvailable === 0
+          config.APP_ENV !== 'production' ||
+          config.STRIPE_MODE === 'sandbox' ||
+          editionStatus(e) === 'closed' ||
+          e.placesAvailable === 0
             ? []
             : e.paymentLinks
                 .filter(

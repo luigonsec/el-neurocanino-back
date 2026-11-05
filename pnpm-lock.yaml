@@ -59,6 +59,9 @@ importers:
       sharp:
         specifier: ^0.34.4
         version: 0.34.5
+      stripe:
+        specifier: ^23.0.1
+        version: 23.0.1(@types/node@24.19.1)
       typeorm:
         specifier: 0.3.31
         version: 0.3.31(mysql2@3.24.5(@types/node@24.19.1))(ts-node@10.9.2(@types/node@24.19.1)(typescript@5.9.3))
@@ -2203,6 +2206,15 @@ packages:
   strip-json-comments@3.1.1:
     resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
     engines: {node: '>=8'}
+
+  stripe@23.0.1:
+    resolution: {integrity: sha512-VFLs9IAzSZ8GIm6/vqhjqOL0fbYrSNYCpgZ3LS3YkSi/i5RnyMpu/Hf9YxPTOCYwc3mZKU3IJvuvKffQH2NLMg==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@types/node': '>=20'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   strtok3@10.3.5:
     resolution: {integrity: sha512-ki4hZQfh5rX0QDLLkOCj+h+CVNkqmp/CMf8v8kZpkNVK6jGQooMytqzLZYUVYIZcFZ6yDB70EfD8POcFXiF5oA==}
@@ -4784,6 +4796,10 @@ snapshots:
   strip-final-newline@2.0.0: {}
 
   strip-json-comments@3.1.1: {}
+
+  stripe@23.0.1(@types/node@24.19.1):
+    optionalDependencies:
+      '@types/node': 24.19.1
 
   strtok3@10.3.5:
     dependencies:

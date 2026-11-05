@@ -2,9 +2,12 @@ import { confirmedBookings } from '../content/booking-defaults';
 import { EntityManager } from 'typeorm';
 import { CommercialOffer, Service } from './entities';
 import { commercialDefaults } from '../content/commerce-data';
+import { completeProgramCardSubtitle } from '../content/landing-cards';
+import { completeCardSubtitle20261105 } from '../content/service-content-20261105';
 
 export async function seedCommerce(manager: EntityManager) {
-  const services = await manager.getRepository(Service).find();
+  // This seed also runs in a historical migration, before later service columns exist.
+  const services = await manager.getRepository(Service).find({ select: { id: true, code: true } });
   for (const defaults of commercialDefaults) {
     if (await manager.getRepository(CommercialOffer).existsBy({ code: defaults.code })) continue;
     const linked = services.filter((s) =>
@@ -12,9 +15,14 @@ export async function seedCommerce(manager: EntityManager) {
     );
     if (linked.length !== defaults.serviceCodes.length) continue;
     const row = defaults as any;
+    const hasCardSubtitle =
+      (await manager.query("SHOW COLUMNS FROM commercial_offers LIKE 'card_subtitle'")).length > 0;
     const offer = await manager.getRepository(CommercialOffer).save({
       code: row.code,
       title: row.title,
+      ...(hasCardSubtitle && row.code === 'online-presencial'
+        ? { cardSubtitle: completeCardSubtitle20261105 || completeProgramCardSubtitle }
+        : {}),
       description: row.description,
       route: row.route || null,
       seoTitle: row.seoTitle || null,

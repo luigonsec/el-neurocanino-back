@@ -54,6 +54,11 @@ describe('Publicación y contratación de ofertas', () => {
     expect(result.bookingUrl).toBe(DEMO_CALENDLY_URL);
     expect(result.bookingIsDemo).toBe(true);
   });
+  it('oculta enlaces de pago reales en staging aunque la oferta esté publicada', () => {
+    const result = publicOffer({ ...offer, provisional: false }, 'staging');
+    expect(result.options[0].paymentUrl).toBeNull();
+    expect(result.options[0].hasPaymentLink).toBe(false);
+  });
   it('mantiene el Calendly definitivo y solo anuncia Klarna tras configurarlo', () => {
     const result = publicOffer(
       { ...offer, provisional: false, bookingUrl: 'https://calendly.com/cliente/admisiones' },
@@ -94,6 +99,11 @@ describe('Publicación y contratación de ofertas', () => {
       serviceCodes: ['online', 'presencial'],
     };
     expect(offerSchema.safeParse(draft).success).toBe(true);
+    expect(
+      offerSchema.parse({ ...draft, cardSubtitle: '  Formación completa  ' }).cardSubtitle,
+    ).toBe('Formación completa');
+    expect(offerSchema.parse(draft).cardSubtitle).toBeUndefined();
+    expect(offerSchema.safeParse({ ...draft, cardSubtitle: 'x'.repeat(256) }).success).toBe(false);
     expect(offerSchema.safeParse({ ...draft, serviceCodes: ['online'] }).success).toBe(false);
     expect(offerSchema.safeParse({ ...draft, serviceCodes: ['comunidad', 'online'] }).success).toBe(
       false,

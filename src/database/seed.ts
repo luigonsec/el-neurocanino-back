@@ -7,6 +7,8 @@ import { config } from '../config';
 import { servicePresentation20261028 } from '../content/program-presentation-20261028';
 import { consultation20261028 } from '../content/stripe-links-20261028';
 import { seedCommerce } from './commerce-seed';
+import { onlineCard } from '../content/landing-cards';
+import { serviceContent20261105 } from '../content/service-content-20261105';
 export async function seed(db: DataSource) {
   for (const service of services) {
     if (await db.getRepository(Service).findOneBy({ code: service.code })) continue;
@@ -16,6 +18,12 @@ export async function seed(db: DataSource) {
         ...values,
         ...servicePresentation20261028.find((p) => p.code === values.code),
         ...(values.code === 'intensiva' ? consultation20261028 : {}),
+        cardSubtitle:
+          values.code === 'online'
+            ? onlineCard.subtitle
+            : servicePresentation20261028.find((p) => p.code === values.code)?.label ||
+              (values.code === 'intensiva' ? consultation20261028.label : values.label),
+        cardDescription: values.code === 'online' ? onlineCard.description : null,
         cardImage: serviceCardImages[service.code] || null,
         actionMode: service.code === 'comunidad' ? 'external' : 'contact',
         actionUrl: service.code === 'comunidad' ? 'https://www.skool.com/elneurocanino' : null,
@@ -27,6 +35,7 @@ export async function seed(db: DataSource) {
         seoDescription:
           servicePresentation20261028.find((p) => p.code === service.code)?.seoDescription ||
           (service.code === 'intensiva' ? consultation20261028.seoDescription : null),
+        ...serviceContent20261105.find((entry) => entry.code === service.code),
       });
       await manager
         .getRepository(ServiceOutcome)

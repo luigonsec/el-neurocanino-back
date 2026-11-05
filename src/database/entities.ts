@@ -1,4 +1,11 @@
 import {
+  PurchaseOrder,
+  PurchaseAttempt,
+  PurchaseReceipt,
+  StripeEventRecord,
+  StripeCatalogBinding,
+} from '../payments/entities';
+import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
@@ -19,6 +26,12 @@ export class Service {
   @Column() title!: string;
   @Column() label!: string;
   @Column({ type: 'text' }) intro!: string;
+  @Column({ name: 'card_subtitle', type: 'varchar', length: 255, nullable: true }) cardSubtitle!:
+    | string
+    | null;
+  @Column({ name: 'card_description', type: 'text', nullable: true }) cardDescription!:
+    | string
+    | null;
   @Column({ type: 'text' }) description!: string;
   @OneToMany(() => ServiceOutcome, (outcome) => outcome.service) outcomes!: ServiceOutcome[];
   @Column() image!: string;
@@ -72,6 +85,9 @@ export class CommercialOffer {
   @PrimaryGeneratedColumn() id!: number;
   @Column({ unique: true, length: 60 }) code!: string;
   @Column() title!: string;
+  @Column({ name: 'card_subtitle', type: 'varchar', length: 255, nullable: true }) cardSubtitle!:
+    | string
+    | null;
   @Column({ type: 'text' }) description!: string;
   @Column({ type: 'varchar', length: 255, nullable: true, unique: true }) route!: string | null;
   @Column({ name: 'booking_url', type: 'varchar', length: 500, nullable: true }) bookingUrl!:
@@ -222,6 +238,8 @@ export class Media {
 @Entity('deliveries')
 export class Delivery {
   @PrimaryGeneratedColumn() id!: number;
+  @Column({ name: 'dedupe_key', type: 'varchar', length: 100, nullable: true, unique: true })
+  dedupeKey!: string | null;
   @Column({ name: 'lead_id', length: 36 }) leadId!: string;
   @Column({ length: 20 }) channel!: string;
   @Column({ length: 20, default: 'pending' }) status!: string;
@@ -230,6 +248,11 @@ export class Delivery {
   @Column({ name: 'last_error', type: 'text', nullable: true }) lastError!: string | null;
 }
 export const entities = [
+  PurchaseOrder,
+  PurchaseAttempt,
+  PurchaseReceipt,
+  StripeEventRecord,
+  StripeCatalogBinding,
   CommercialOffer,
   PaymentOption,
   EditionPaymentLink,

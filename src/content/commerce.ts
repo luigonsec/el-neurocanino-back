@@ -103,6 +103,7 @@ export const offerSchema = z
   .object({
     code: z.string().regex(/^[a-z][a-z0-9-]{1,59}$/),
     title: z.string().trim().min(2).max(255),
+    cardSubtitle: optionalText().optional(),
     description: z.string().trim().min(10).max(10000),
     route: z
       .literal(PACK_ROUTE)
@@ -166,6 +167,7 @@ export function safeBooking(url: string | null | undefined, env = config.APP_ENV
   return url;
 }
 export function publicOffer(offer: CommercialOffer, env = config.APP_ENV) {
+  const localPaymentsDisabled = env !== 'production' && config.STRIPE_MODE !== 'sandbox';
   const requiresEdition = offer.services.some((s) => s.code === 'presencial');
   const legacy =
     offer.services.length === 1 && offer.services[0].actionMode === 'calendly'
@@ -189,6 +191,7 @@ export function publicOffer(offer: CommercialOffer, env = config.APP_ENV) {
       image: s.cardImage || s.image,
     })),
     requiresEdition,
+    checkoutMode: config.STRIPE_MODE,
     bookingUrl,
     bookingIsDemo: isDemoBooking(bookingUrl),
     klarnaEnabled: Boolean(
@@ -203,18 +206,28 @@ export function publicOffer(offer: CommercialOffer, env = config.APP_ENV) {
           balanceCents: option.balanceCents || 0,
           totalCents: paymentTotal(option),
           paymentUrl:
-            offer.provisional || requiresEdition
+            localPaymentsDisabled ||
+            config.STRIPE_MODE === 'sandbox' ||
+            offer.provisional ||
+            requiresEdition
               ? null
               : option.method === 'calendly'
                 ? safeBooking(option.paymentUrl, env)
                 : option.paymentUrl,
           depositPaymentUrl:
-            offer.provisional || requiresEdition ? null : option.depositPaymentUrl || null,
+            localPaymentsDisabled ||
+            config.STRIPE_MODE === 'sandbox' ||
+            offer.provisional ||
+            requiresEdition
+              ? null
+              : option.depositPaymentUrl || null,
           hasPaymentLink: Boolean(
             !offer.provisional &&
-              option.method === 'stripe' &&
-              stripeUrl.safeParse(option.paymentUrl).success &&
-              (!option.depositCents || stripeUrl.safeParse(option.depositPaymentUrl).success),
+              !localPaymentsDisabled &&
+              (config.STRIPE_MODE === 'sandbox' ||
+                (option.method === 'stripe' &&
+                  stripeUrl.safeParse(option.paymentUrl).success &&
+                  (!option.depositCents || stripeUrl.safeParse(option.depositPaymentUrl).success))),
           ),
           whatsappUrl: offer.provisional ? null : option.whatsappUrl,
           transferInstructions: offer.provisional ? null : option.transferInstructions,
@@ -276,6 +289,10 @@ export async function resolvePaymentDestinations(
     .getRepository(CommercialOffer)
     .findOne({ where: { code, published: true }, relations });
   if (!offer) throw new NotFoundException('Oferta no disponible.');
+  if (config.STRIPE_MODE === 'sandbox' || config.APP_ENV !== 'production')
+    throw new BadRequestException(
+      'Usa el checkout del sandbox; los enlaces reales no están disponibles.',
+    );
   const option = offer.options.find((o) => o.id === optionId);
   if (!option) throw new NotFoundException('La modalidad no pertenece a esta oferta.');
   if (offer.provisional) return { paymentUrl: null, depositPaymentUrl: null };

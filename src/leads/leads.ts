@@ -24,6 +24,7 @@ import { SessionGuard } from '../auth/auth';
 import { config } from '../config';
 import { createHash, randomUUID } from 'node:crypto';
 import { quizLeadSchema } from './quiz-schema';
+import { PurchaseOrder } from '../payments/entities';
 import { editionStatus } from '../content/edition-status';
 const statusSchema = z.object({ status: z.enum(['new', 'contacted', 'closed']) });
 export function csvCell(value: unknown) {
@@ -184,8 +185,8 @@ export class AdminLeadsController {
   private builder(query: Record<string, string>) {
     const q = parse(
       z.object({
-        category: z.enum(['general', 'service', 'edition', 'regional']).optional(),
-        kind: z.enum(['general', 'service', 'edition', 'regional']).optional(),
+        category: z.enum(['general', 'service', 'edition', 'regional', 'purchase']).optional(),
+        kind: z.enum(['general', 'service', 'edition', 'regional', 'purchase']).optional(),
         status: z.enum(['new', 'contacted', 'closed']).optional(),
         service: z.string().max(40).optional(),
         source: z.string().max(100).optional(),
@@ -216,9 +217,12 @@ export class AdminLeadsController {
       if (q.category === 'service') b.andWhere('lead.editionId IS NULL');
     }
     if (q.service === 'online-presencial')
-      b.andWhere("JSON_UNQUOTE(JSON_EXTRACT(lead.quiz_context, '$.recommendation')) = :packCode", {
-        packCode: 'online-presencial',
-      });
+      b.andWhere(
+        "(JSON_UNQUOTE(JSON_EXTRACT(lead.quiz_context, '$.recommendation')) = :packCode OR lead.id IN (SELECT lead_id FROM purchase_orders WHERE JSON_UNQUOTE(JSON_EXTRACT(snapshot, '$.code')) = :packCode))",
+        {
+          packCode: 'online-presencial',
+        },
+      );
     if (q.investment)
       b.andWhere("JSON_UNQUOTE(JSON_EXTRACT(lead.quiz_context, '$.investment')) = :investment", {
         investment: q.investment,
@@ -231,7 +235,25 @@ export class AdminLeadsController {
       .skip((page - 1) * 25)
       .take(25)
       .getManyAndCount();
-    return { items, total, page, pageSize: 25 };
+    const purchases = items.some((lead) => lead.kind === 'purchase')
+      ? await this.db.getRepository(PurchaseOrder).find({
+          where: items
+            .filter((lead) => lead.kind === 'purchase')
+            .map((lead) => ({ leadId: lead.id })),
+          select: { leadId: true, snapshot: true },
+        })
+      : [];
+    return {
+      items: items.map((lead) => ({
+        ...lead,
+        ...(lead.kind === 'purchase'
+          ? { purchaseTitle: purchases.find((p) => p.leadId === lead.id)?.snapshot.title }
+          : {}),
+      })),
+      total,
+      page,
+      pageSize: 25,
+    };
   }
   @Get('export.csv') async export(@Query() query: Record<string, string>, @Res() res: Response) {
     const { b } = this.builder(query);
@@ -312,6 +334,19 @@ export class AdminLeadsController {
     if (!lead) throw new NotFoundException();
     return {
       ...lead,
+      purchase: await this.db.getRepository(PurchaseOrder).findOne({
+        where: { leadId: id },
+        select: {
+          id: true,
+          snapshot: true,
+          status: true,
+          billingStatus: true,
+          amountPaid: true,
+          paidInstallments: true,
+          isTest: true,
+          scheduleId: true,
+        },
+      }),
       deliveries: await this.db
         .getRepository(Delivery)
         .find({ where: { leadId: id }, order: { id: 'ASC' } }),

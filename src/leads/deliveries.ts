@@ -3,6 +3,9 @@ import { DataSource, LessThanOrEqual } from 'typeorm';
 import nodemailer from 'nodemailer';
 import { Delivery, Lead, Session } from '../database/entities';
 import { CrmAdapter } from './crm';
+import { PurchaseOrder } from '../payments/entities';
+import { purchaseEmail } from '../payments/email';
+import { leadNotificationEmail } from '../emails/lead-notification';
 import { config } from '../config';
 @Injectable()
 export class DeliveryWorker implements OnModuleInit, OnModuleDestroy {
@@ -12,9 +15,13 @@ export class DeliveryWorker implements OnModuleInit, OnModuleDestroy {
     this.timer = setInterval(() => {
       if (!this.running) {
         this.running = true;
-        void this.flush().finally(() => {
-          this.running = false;
-        });
+        void this.flush()
+          .catch(() =>
+            this.logger.warn('La cola de avisos se reintentará al recuperar la conexión.'),
+          )
+          .finally(() => {
+            this.running = false;
+          });
       }
     }, 10000);
     this.timer.unref();
@@ -43,6 +50,7 @@ export class DeliveryWorker implements OnModuleInit, OnModuleDestroy {
         try {
           const lead = await runner.manager.getRepository(Lead).findOneByOrFail({ id: d.leadId });
           if (d.channel === 'crm') await this.crm.upsertLead(lead);
+          else if (d.channel === 'purchase_email') await this.sendPurchase(lead);
           else await this.sendEmail(lead);
           await runner.manager
             .getRepository(Delivery)
@@ -68,6 +76,37 @@ export class DeliveryWorker implements OnModuleInit, OnModuleDestroy {
       await runner.release();
     }
   }
+  async sendPurchase(lead: Lead) {
+    const order = await this.db
+      .getRepository(PurchaseOrder)
+      .findOneByOrFail({ leadId: lead.id, isTest: true });
+    if (
+      !order.email ||
+      !config.PURCHASE_SMTP_HOST ||
+      !config.PURCHASE_SMTP_USER ||
+      !config.PURCHASE_SMTP_PASSWORD
+    )
+      throw new Error('SMTP de compras o destinatario sin configurar.');
+    const transport = nodemailer.createTransport({
+      host: config.PURCHASE_SMTP_HOST,
+      port: config.PURCHASE_SMTP_PORT,
+      secure: config.PURCHASE_SMTP_PORT === 465,
+      auth: { user: config.PURCHASE_SMTP_USER, pass: config.PURCHASE_SMTP_PASSWORD },
+      connectionTimeout: 10000,
+      socketTimeout: 15000,
+    });
+    try {
+      await transport.sendMail({
+        from: config.PURCHASE_SMTP_FROM,
+        to: order.email,
+        replyTo: 'debug@gonseclabs.com',
+        messageId: `<purchase-${order.id}@gonseclabs.com>`,
+        ...purchaseEmail(order),
+      });
+    } finally {
+      transport.close();
+    }
+  }
   async sendEmail(lead: Lead) {
     if (!config.SMTP_HOST || !config.NOTIFICATION_EMAIL)
       throw new Error('SMTP o destinatario sin configurar.');
@@ -84,8 +123,7 @@ export class DeliveryWorker implements OnModuleInit, OnModuleDestroy {
         from: config.SMTP_FROM,
         to: config.NOTIFICATION_EMAIL,
         replyTo: lead.email || undefined,
-        subject: `Nueva solicitud · ${lead.kind === 'regional' ? 'Edición en su zona' : lead.serviceCode || 'Información'}`,
-        text: `${lead.name}\n${lead.email || 'Sin email'}\n${lead.phone || ''}\n${lead.city || ''}\n\n${lead.message}\n\nConsulta la solicitud en ${config.PUBLIC_ORIGIN}/admin/`,
+        ...leadNotificationEmail(lead, `${config.PUBLIC_ORIGIN}/admin/`),
       });
     } finally {
       transport.close();

@@ -1,4 +1,7 @@
 import 'reflect-metadata';
+import { AdminPurchasesController } from './payments/admin';
+import { CheckoutController } from './payments/checkout';
+import { PaymentWorker } from './payments/worker';
 import { Controller, Get, Inject, Module, ServiceUnavailableException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -33,6 +36,8 @@ class HealthController {
 @Module({
   imports: [TypeOrmModule.forRoot(databaseOptions)],
   controllers: [
+    CheckoutController,
+    AdminPurchasesController,
     AuthController,
     AdminContentController,
     PublicContentController,
@@ -43,7 +48,12 @@ class HealthController {
     MediaController,
     HealthController,
   ],
-  providers: [SessionGuard, { provide: CrmAdapter, useClass: DatabaseCrmAdapter }, DeliveryWorker],
+  providers: [
+    PaymentWorker,
+    SessionGuard,
+    { provide: CrmAdapter, useClass: DatabaseCrmAdapter },
+    DeliveryWorker,
+  ],
 })
 class AppModule {}
 async function bootstrap() {
@@ -52,7 +62,14 @@ async function bootstrap() {
   server.set('trust proxy', 1);
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cookieParser());
-  app.use(express.json({ limit: '64kb' }));
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req, _res, buf) => {
+        (req as any).rawBody = Buffer.from(buf);
+      },
+    }),
+  );
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Robots-Tag', 'noindex');
@@ -76,6 +93,7 @@ async function bootstrap() {
   app.use('/api/v1/leads', limiter(15));
   app.use('/api/v1/quiz-leads', limiter(30));
   app.use('/api/v1/region-requests', limiter(15));
+  app.use('/api/v1/checkout/sessions', limiter(30));
   app.use(
     '/media',
     express.static(path.resolve(config.UPLOAD_DIR), {
