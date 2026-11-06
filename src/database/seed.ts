@@ -9,6 +9,7 @@ import { consultation20261028 } from '../content/stripe-links-20261028';
 import { seedCommerce } from './commerce-seed';
 import { onlineCard } from '../content/landing-cards';
 import { serviceContent20261105 } from '../content/service-content-20261105';
+import { sevillaServiceContent } from '../content/sevilla-services';
 export async function seed(db: DataSource) {
   for (const service of services) {
     if (await db.getRepository(Service).findOneBy({ code: service.code })) continue;
@@ -36,6 +37,7 @@ export async function seed(db: DataSource) {
           servicePresentation20261028.find((p) => p.code === service.code)?.seoDescription ||
           (service.code === 'intensiva' ? consultation20261028.seoDescription : null),
         ...serviceContent20261105.find((entry) => entry.code === service.code),
+        ...sevillaServiceContent.find((entry) => entry.code === service.code),
       });
       await manager
         .getRepository(ServiceOutcome)

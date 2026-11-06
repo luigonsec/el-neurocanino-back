@@ -6,6 +6,7 @@ import {
   publicOffer,
   safeBooking,
   saveEditionPaymentLinks,
+  AdminOffersController,
 } from '../src/content/commerce';
 import { DEMO_CALENDLY_URL } from '../src/content/commerce-data';
 import { CommercialOffer, PaymentOption, EditionPaymentLink } from '../src/database/entities';
@@ -37,6 +38,14 @@ const offer = {
   options: [option],
 } as unknown as CommercialOffer;
 describe('Publicación y contratación de ofertas', () => {
+  it('impide volver a publicar pagos de Stripe para los servicios reservados por Calendly', async () => {
+    const controller = new AdminOffersController({} as any);
+    for (const code of ['intensiva', 'educacion', 'rehabilitacion']) {
+      await expect(
+        controller.create({ ...offer, code, route: null, serviceCodes: [code], published: true }),
+      ).rejects.toThrow('se reservan mediante Calendly');
+    }
+  });
   it('oculta precios provisionales y calendario de prueba en producción', () => {
     const result = publicOffer(offer, 'production');
     expect(result.options).toEqual([]);

@@ -4,6 +4,7 @@ import { CommercialOffer, Service } from './entities';
 import { commercialDefaults } from '../content/commerce-data';
 import { completeProgramCardSubtitle } from '../content/landing-cards';
 import { completeCardSubtitle20261105 } from '../content/service-content-20261105';
+import { calendlyServiceCodes } from '../content/sevilla-services';
 
 export async function seedCommerce(manager: EntityManager) {
   // This seed also runs in a historical migration, before later service columns exist.
@@ -27,7 +28,7 @@ export async function seedCommerce(manager: EntityManager) {
       route: row.route || null,
       seoTitle: row.seoTitle || null,
       seoDescription: row.seoDescription || null,
-      published: true,
+      published: !calendlyServiceCodes.some((code) => code === row.code),
       provisional: Boolean(row.provisional),
       bookingUrl: row.code === 'intensiva' ? null : confirmedBookings[row.code] || null,
       klarnaEnabled: false,

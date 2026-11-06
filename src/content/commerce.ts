@@ -31,6 +31,7 @@ import { SessionGuard } from '../auth/auth';
 import { config } from '../config';
 import { apiSchema, calendlyUrl, externalUrl, optionalText, parse } from '../validation';
 import { DEMO_CALENDLY_URL, PACK_ROUTE } from './commerce-data';
+import { calendlyServiceCodes } from './sevilla-services';
 
 export const stripeUrl = externalUrl.refine(
   (value) =>
@@ -401,6 +402,9 @@ export class AdminOffersController {
     return this.save(parse(offerSchema, body), id);
   }
   private async save(values: OfferValues, id?: number) {
+    if (values.published && calendlyServiceCodes.some((code) => code === values.code)) {
+      throw new BadRequestException('Los servicios personalizados se reservan mediante Calendly.');
+    }
     return this.db.transaction(async (manager) => {
       const repo = manager.getRepository(CommercialOffer);
       const current = id

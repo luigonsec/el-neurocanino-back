@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { SevillaServices1793272000000 } from './sevilla-services-migration';
 import { ServiceContentSync1793186000000 } from './service-content-sync-migration';
 import { LandingCards1793185000000 } from './landing-cards-migration';
 import { Purchases1793184000000 } from './purchases-migration';
@@ -53,6 +54,7 @@ export const databaseOptions = {
     Purchases1793184000000,
     LandingCards1793185000000,
     ServiceContentSync1793186000000,
+    SevillaServices1793272000000,
   ],
   synchronize: false,
 };
