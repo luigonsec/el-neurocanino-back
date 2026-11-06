@@ -12,3 +12,6 @@ artifacts/
 uploads/
 .DS_Store
 *.log
+
+# Contexto privado local de Codex
+/AGENTS.md

@@ -10,3 +10,7 @@ artifacts
 .env.*
 
 .git
+
+# Instrucciones privadas del agente
+AGENTS.md
+.agent-private
