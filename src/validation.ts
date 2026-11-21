@@ -28,91 +28,19 @@ export const optionalText = (max = 255) =>
 export const mediaPath = z
   .string()
   .regex(/^\/(images|media)\/[a-zA-Z0-9_.\/-]+$/, 'Selecciona una imagen del proyecto.')
-  .max(255);
-export const calendlyUrl = z.url().refine((u) => {
-  const url = new URL(u);
-  return url.protocol === 'https:' && url.hostname === 'calendly.com';
-}, 'Usa una URL https://calendly.com/…');
-export const externalUrl = z
+  .max(255)
+  .refine((p) => !p.includes('..'));
+export const calendlyUrl = z
   .url()
-  .refine((u) => new URL(u).protocol === 'https:', 'La URL debe utilizar HTTPS.');
-export const serviceOutcomeSchema = z.object({
-  id: z.number().int().positive().optional(),
-  title: z.string().trim().min(2).max(255),
-  description: z.string().trim().max(4000),
-});
-export const serviceSchema = z
-  .object({
-    title: z.string().trim().min(2).max(255),
-    label: z.string().trim().min(2).max(255),
-    intro: z.string().trim().min(10).max(2000),
-    cardSubtitle: optionalText().optional(),
-    cardDescription: optionalText(2000).optional(),
-    description: z.string().trim().min(10).max(10000),
-    outcomes: z
-      .array(serviceOutcomeSchema)
-      .max(20)
-      .refine((points) => {
-        const ids = points.flatMap((point) => (point.id ? [point.id] : []));
-        return new Set(ids).size === ids.length;
-      }, 'Un punto no puede aparecer dos veces.'),
-    image: mediaPath,
-    cardImage: mediaPath.nullish(),
-    actionMode: z.enum(['contact', 'external', 'calendly']),
-    actionUrl: optionalText(500),
-    seoTitle: optionalText(),
-    seoDescription: optionalText(500),
-  })
-  .superRefine((v, c) => {
-    if (v.actionUrl) {
-      const r = (v.actionMode === 'calendly' ? calendlyUrl : externalUrl).safeParse(v.actionUrl);
-      if (!r.success)
-        c.addIssue({ code: 'custom', path: ['actionUrl'], message: r.error.issues[0].message });
-    }
-  });
-const date = z.iso.date();
-export const editionSchema = z
-  .object({
-    title: z.string().trim().min(2).max(255),
-    location: z.string().trim().min(2).max(255),
-    city: z.string().trim().min(2).max(255),
-    province: z.string().trim().min(2).max(255),
-    status: z.enum(['open', 'closed']).default('open'),
-    startDate: date,
-    endDate: date,
-    description: z.string().trim().min(10).max(10000),
-    capacity: z.number().int().min(1).max(10000),
-    placesAvailable: z.number().int().min(0),
-    photos: z.array(mediaPath).max(12),
-    calendlyUrl: calendlyUrl.nullish().transform((v) => v || null),
-    paymentLinks: z
-      .array(z.object({ paymentOptionId: z.number().int().positive(), url: externalUrl }))
-      .max(24)
-      .refine(
-        (links) => new Set(links.map((link) => link.paymentOptionId)).size === links.length,
-        'No repitas opciones de pago.',
-      )
-      .optional(),
-    published: z.boolean(),
-    isDemo: z.boolean(),
-  })
-  .refine((v) => v.endDate >= v.startDate, {
-    path: ['endDate'],
-    message: 'La fecha final debe ser igual o posterior a la inicial.',
-  })
-  .refine((v) => v.placesAvailable <= v.capacity, {
-    path: ['placesAvailable'],
-    message: 'Las plazas disponibles no pueden superar el total.',
-  });
-export const reviewSchema = z.object({
-  author: z.string().trim().min(2).max(255),
-  photoPath: mediaPath.nullish().transform((v) => v || null),
-  authorUrl: externalUrl.nullish().transform((v) => v || null),
-  text: z.string().trim().min(10).max(4000),
-  rating: z.number().int().min(1).max(5),
-  date: date.nullish().transform((v) => v || null),
-  sourceUrl: externalUrl.nullish().transform((v) => v || null),
-  sortOrder: z.number().int().min(0).max(10000),
-  published: z.boolean(),
-  isDemo: z.boolean(),
-});
+  .max(500)
+  .refine((u) => {
+    const v = new URL(u);
+    return (
+      v.protocol === 'https:' &&
+      v.hostname === 'calendly.com' &&
+      !v.username &&
+      !v.password &&
+      !v.port &&
+      v.pathname.split('/').filter(Boolean).length >= 2
+    );
+  }, 'Usa el enlace HTTPS de un evento de Calendly.');

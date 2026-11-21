@@ -23,17 +23,7 @@ const schema = z.object({
         .filter(Boolean),
     )
     .pipe(z.array(z.url())),
-  CRM_PROVIDER: z.enum(['local']).default('local'),
   UPLOAD_DIR: z.string().default('./uploads'),
-  STRIPE_MODE: z.enum(['disabled', 'sandbox']).default('disabled'),
-  STRIPE_SECRET_KEY: z.string().default(''),
-  STRIPE_WEBHOOK_SECRET: z.string().default(''),
-  STRIPE_ACCOUNT_ID: z.string().default('acct_1RyFiA40PGFVl5hD'),
-  PURCHASE_SMTP_HOST: z.string().default(''),
-  PURCHASE_SMTP_PORT: z.coerce.number().default(465),
-  PURCHASE_SMTP_USER: z.string().default(''),
-  PURCHASE_SMTP_PASSWORD: z.string().default(''),
-  PURCHASE_SMTP_FROM: z.string().default('AC by El Neurocanino <debug@gonseclabs.com>'),
   SMTP_HOST: z.string().default(''),
   SMTP_PORT: z.coerce.number().default(1025),
   SMTP_SECURE: z.enum(['true', 'false']).default('false'),
@@ -41,7 +31,6 @@ const schema = z.object({
   SMTP_PASSWORD: z.string().default(''),
   SMTP_FROM: z.string().default('El Neurocanino <web@localhost>'),
   NOTIFICATION_EMAIL: z.string().default(''),
-  SEED_DEMO: z.enum(['true', 'false']).default('false'),
 });
 export const config = schema.parse(process.env);
 if (
@@ -55,9 +44,3 @@ if (config.APP_ENV === 'production' && !config.PUBLIC_ORIGIN.startsWith('https:/
 export const allowedOrigins = new Set(
   [config.PUBLIC_ORIGIN, ...config.ADDITIONAL_PUBLIC_ORIGINS].map((url) => new URL(url).origin),
 );
-
-if (
-  config.STRIPE_MODE === 'sandbox' &&
-  (config.APP_ENV === 'production' || !/^(sk|rk)_test_/.test(config.STRIPE_SECRET_KEY))
-)
-  throw new Error('Stripe sandbox necesita una clave de prueba y un entorno no productivo.');

@@ -1,28 +1,8 @@
 import 'reflect-metadata';
-import { SevillaServices1793272000000 } from './sevilla-services-migration';
-import { ServiceContentSync1793186000000 } from './service-content-sync-migration';
-import { LandingCards1793185000000 } from './landing-cards-migration';
-import { Purchases1793184000000 } from './purchases-migration';
-import { StripeLinks1793183000000 } from './stripe-links-migration';
-import { ProgramPresentation1793182000000 } from './program-presentation-migration';
-import { ConfirmedCalendars1793181000000 } from './confirmed-calendars-migration';
-import { ProgramPrices1793180000000 } from './program-prices-migration';
-import { ReviewPhotos1792830000000 } from './review-photos-migration';
-import { QuizLeads1792601000000 } from './quiz-leads-migration';
 import { DataSource } from 'typeorm';
 import { config } from '../config';
 import { entities } from './entities';
-import { InitialSchema1791320000000 } from './migration';
-import { ClubBrandAssets1791381600000 } from './brand-assets-migration';
-import { OrganizePublicImages1791410000000 } from './public-images-migration';
-import { AdminImprovements1791420000000 } from './admin-improvements-migration';
-import { RenamePresencial1792170000000 } from './rename-presencial-migration';
-import { ServiceCards1792171000000 } from './service-cards-migration';
-import { ServiceOutcomes1792172000000 } from './service-outcomes-migration';
-import { CommunitySkool1792510000000 } from './community-skool-migration';
-import { CommunityBanner1792511000000 } from './community-banner-migration';
-import { CommercialOffers1792520000000 } from './commercial-offers-migration';
-import { CorrectProgramPack1792600000000 } from './correct-program-pack-migration';
+import { InitialSchema1795219200000 } from './migration';
 export const databaseOptions = {
   type: 'mysql' as const,
   host: config.DB_HOST,
@@ -33,29 +13,7 @@ export const databaseOptions = {
   charset: 'utf8mb4',
   timezone: 'Z',
   entities,
-  migrations: [
-    InitialSchema1791320000000,
-    ClubBrandAssets1791381600000,
-    OrganizePublicImages1791410000000,
-    AdminImprovements1791420000000,
-    RenamePresencial1792170000000,
-    ServiceCards1792171000000,
-    ServiceOutcomes1792172000000,
-    CommunitySkool1792510000000,
-    CommunityBanner1792511000000,
-    CommercialOffers1792520000000,
-    CorrectProgramPack1792600000000,
-    QuizLeads1792601000000,
-    ReviewPhotos1792830000000,
-    ProgramPrices1793180000000,
-    ConfirmedCalendars1793181000000,
-    ProgramPresentation1793182000000,
-    StripeLinks1793183000000,
-    Purchases1793184000000,
-    LandingCards1793185000000,
-    ServiceContentSync1793186000000,
-    SevillaServices1793272000000,
-  ],
+  migrations: [InitialSchema1795219200000],
   synchronize: false,
 };
 export const dataSource = new DataSource(databaseOptions);

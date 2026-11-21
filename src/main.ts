@@ -1,7 +1,4 @@
 import 'reflect-metadata';
-import { AdminPurchasesController } from './payments/admin';
-import { CheckoutController } from './payments/checkout';
-import { PaymentWorker } from './payments/worker';
 import { Controller, Get, Inject, Module, ServiceUnavailableException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,11 +12,10 @@ import path from 'node:path';
 import { config, allowedOrigins } from './config';
 import { databaseOptions } from './database/source';
 import { AuthController, SessionGuard } from './auth/auth';
-import { AdminContentController, PublicContentController } from './content/content';
-import { AdminOffersController, PublicOffersController } from './content/commerce';
 import { AdminLeadsController, LeadsController } from './leads/leads';
-import { CrmAdapter, DatabaseCrmAdapter } from './leads/crm';
 import { DeliveryWorker } from './leads/deliveries';
+import { EventsController, AdminEventsController } from './events/events';
+import { PublicConfigController, AdminBookingsController } from './bookings/bookings';
 import { MediaController } from './media/media';
 @Controller('health')
 class HealthController {
@@ -36,24 +32,17 @@ class HealthController {
 @Module({
   imports: [TypeOrmModule.forRoot(databaseOptions)],
   controllers: [
-    CheckoutController,
-    AdminPurchasesController,
     AuthController,
-    AdminContentController,
-    PublicContentController,
-    AdminOffersController,
-    PublicOffersController,
+    PublicConfigController,
+    AdminBookingsController,
     AdminLeadsController,
     LeadsController,
+    EventsController,
+    AdminEventsController,
     MediaController,
     HealthController,
   ],
-  providers: [
-    PaymentWorker,
-    SessionGuard,
-    { provide: CrmAdapter, useClass: DatabaseCrmAdapter },
-    DeliveryWorker,
-  ],
+  providers: [SessionGuard, DeliveryWorker],
 })
 class AppModule {}
 async function bootstrap() {
@@ -62,14 +51,7 @@ async function bootstrap() {
   server.set('trust proxy', 1);
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cookieParser());
-  app.use(
-    express.json({
-      limit: '1mb',
-      verify: (req, _res, buf) => {
-        (req as any).rawBody = Buffer.from(buf);
-      },
-    }),
-  );
+  app.use(express.json({ limit: '64kb' }));
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Robots-Tag', 'noindex');
@@ -89,11 +71,15 @@ async function bootstrap() {
       legacyHeaders: false,
       message: { message: 'Demasiados intentos. Espera unos minutos.' },
     });
+  const eventLimiter = limiter(20);
   app.use('/api/v1/auth/login', limiter(10));
-  app.use('/api/v1/leads', limiter(15));
-  app.use('/api/v1/quiz-leads', limiter(30));
-  app.use('/api/v1/region-requests', limiter(15));
-  app.use('/api/v1/checkout/sessions', limiter(30));
+  app.use('/api/v1/contact', limiter(15));
+  app.use('/api/v1/program-applications', limiter(30));
+  app.use(
+    '/api/v1/events',
+    (req: express.Request, res: express.Response, next: express.NextFunction) =>
+      req.method === 'POST' ? eventLimiter(req, res, next) : next(),
+  );
   app.use(
     '/media',
     express.static(path.resolve(config.UPLOAD_DIR), {

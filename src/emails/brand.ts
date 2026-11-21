@@ -16,24 +16,16 @@ export const htmlEscape = (value: string) =>
   );
 export const paragraph = (text: string) =>
   `<p style="margin:0 0 18px;font-size:15px;line-height:1.8;color:#474943;">${htmlEscape(text).replace(/\n/g, '<br>')}</p>`;
-export function detailRow(label: string, value: string, featured = false, wrap = false) {
-  return `<tr><td style="padding:16px 0;border-bottom:1px solid #e8e6de;font-size:14px;line-height:1.6;color:#575a53;">${htmlEscape(label)}</td><td align="right" style="padding:16px 0 16px 20px;border-bottom:1px solid #e8e6de;font-size:${featured ? '28' : '17'}px;line-height:1.4;font-weight:700;white-space:${wrap ? 'normal' : 'nowrap'};${wrap ? 'overflow-wrap:anywhere;word-break:break-word;' : ''}color:#171915;">${htmlEscape(value)}</td></tr>`;
-}
-export function blockTitle(title: string) {
-  return `<h2 style="margin:0 0 14px;font-size:19px;line-height:1.4;font-weight:700;letter-spacing:-.3px;color:#171915;">${htmlEscape(title)}</h2>`;
-}
 export function brandedEmail({
   preheader,
   eyebrow,
   title,
   content,
-  test = false,
 }: {
   preheader: string;
   eyebrow: string;
   title: string;
   content: string;
-  test?: boolean;
 }) {
   return `<!doctype html>
 <html lang="es" xmlns="http://www.w3.org/1999/xhtml"><head>
@@ -54,7 +46,6 @@ body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}table,td
 <p style="margin:26px 0 12px;font-size:11px;line-height:1.5;font-weight:700;letter-spacing:2px;color:#d4af37;">${htmlEscape(eyebrow.toUpperCase())}</p>
 <h1 class="email-title" style="margin:0;font-family:'Bebas Neue','Arial Narrow',Arial,sans-serif;font-size:36px;line-height:1.15;font-weight:700;letter-spacing:-.8px;color:#ffffff;">${htmlEscape(title)}</h1>
 </td></tr>
-${test ? '<tr><td align="center" bgcolor="#f7f2df" style="padding:11px 24px;background-color:#f7f2df;border-bottom:1px solid #e8dfbf;font-size:11px;line-height:1.6;font-weight:700;letter-spacing:.8px;color:#6b5515;">ENTORNO DE PRUEBAS · SIN COBRO REAL</td></tr>' : ''}
 <tr><td class="email-content" bgcolor="#ffffff" style="padding:36px 40px 40px;background-color:#ffffff;">${content}</td></tr>
 <tr><td class="email-footer" bgcolor="#151515" style="padding:28px 40px;background-color:#151515;border-top:2px solid #d4af37;">
 <p style="margin:0 0 6px;font-size:14px;line-height:1.6;font-weight:700;color:#ffffff;">AC · Adiestracaninos.es</p>

@@ -32,7 +32,7 @@ Los logs tienen rotación. Las copias contienen SQL, uploads, referencias de im�
 
 Para recuperar una versión de aplicación, conservar una copia del entorno e imágenes actuales, sustituir los tags en `.images.env` por los del `images.env` de la copia deseada y ejecutar `docker compose ... up -d --wait`. Esto no restaura MySQL. Para restaurar datos, detener frontend/backend, importar `database.sql.gz` en MySQL, restaurar `uploads.tar.gz` en su volumen y arrancar. Nunca ejecutar `down -v` al actualizar.
 
-La primera importación copia únicamente servicios, puntos del recorrido, ofertas, opciones de pago, ediciones, sus enlaces, reseñas y biblioteca de imágenes del entorno local. No copia leads, sesiones, administradores ni avisos de prueba. Se crea un administrador con contraseña aleatoria independiente; el acceso se entrega fuera de Git. SMTP queda pendiente de configuración, conservándose las solicitudes en el CRM si un aviso no puede enviarse.
+La reestructuración parte de un esquema nuevo, sin catálogo, cobros ni reseñas en MySQL. Esta migración inicial requiere una base vacía; no se debe aplicar sobre las tablas antiguas. La sustitución del esquema en staging o producción debe prepararse como una operación independiente del despliegue automático. El comando `db:reset:dev` está limitado a desarrollo. El seed inicializa únicamente las cinco agendas y no sobrescribe enlaces editados. El administrador se crea por CLI; las credenciales se mantienen fuera de Git. Si SMTP falla, las solicitudes quedan guardadas y el panel permite reintentar el aviso.
 
 ## Cambios de infraestructura
 

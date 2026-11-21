@@ -13,9 +13,7 @@
     "migration:revert": "ts-node src/cli/migrate.ts --revert",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "payments:sync": "ts-node -r dotenv/config src/cli/payments.ts",
-    "payments:listen": "ts-node -r dotenv/config src/cli/stripe-listen.ts",
-    "emails:preview": "ts-node src/cli/email-preview.ts"
+    "db:reset:dev": "ts-node src/cli/reset-development.ts --discard-test-data"
   },
   "dependencies": {
     "@nestjs/common": "11.2.7",
@@ -35,7 +33,6 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sharp": "^0.34.4",
-    "stripe": "^23.0.1",
     "typeorm": "0.3.31",
     "zod": "^4.1.12"
   },
