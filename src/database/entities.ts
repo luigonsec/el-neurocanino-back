@@ -13,7 +13,7 @@ export type LeadStatus = 'new' | 'contacted' | 'closed';
 export type ApplicationOutcome = 'online' | 'complete' | 'community';
 export type RegistrationStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
 
-@Entity('leads')
+@Entity('program_leads')
 @Index(['category', 'createdAt'])
 export class Lead {
   @PrimaryGeneratedColumn('uuid') id!: string;
@@ -92,7 +92,7 @@ export class Media {
   @Column() height!: number;
   @CreateDateColumn({ name: 'created_at' }) createdAt!: Date;
 }
-@Entity('deliveries')
+@Entity('program_deliveries')
 @Index(['status', 'nextAttemptAt'])
 export class Delivery {
   @PrimaryGeneratedColumn() id!: number;
